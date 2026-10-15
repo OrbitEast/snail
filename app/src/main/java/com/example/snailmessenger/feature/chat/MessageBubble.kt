@@ -23,10 +23,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.snailmesssenger.feature.theme.LocalChatTextSize
+import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
 
 @Composable
 fun MessageBubble(message: Message, modifier: Modifier = Modifier) {
     val isDark = MaterialTheme.colorScheme.background.luminanceValue() < 0.5f
+    val messageFontSize = LocalChatTextSize.current
+    val bubbleRadius = LocalChatBubbleRadius.current
     val bubbleColor = when {
         message.isOutgoing && isDark -> Color(0xFF1D69A6)
         message.isOutgoing -> Color(0xFFE8F5D8)
@@ -34,11 +38,7 @@ fun MessageBubble(message: Message, modifier: Modifier = Modifier) {
         else -> Color.White
     }
     val textColor = if (isDark) Color(0xFFF1F5F9) else Color(0xFF222222)
-    val shape = if (message.isOutgoing) {
-        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
-    } else {
-        RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
-    }
+    val shape = RoundedCornerShape(bubbleRadius)
 
     Row(
         modifier = modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
@@ -49,7 +49,7 @@ fun MessageBubble(message: Message, modifier: Modifier = Modifier) {
                 .padding(start = 11.dp, top = 7.dp, end = 8.dp, bottom = 6.dp),
         ) {
             Column {
-                Text(text = message.text, color = textColor, fontSize = 16.sp, lineHeight = 21.sp)
+                Text(text = message.text, color = textColor, fontSize = messageFontSize, lineHeight = (messageFontSize.value * 1.3f).sp)
                 Row(modifier = Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = message.timestamp,
