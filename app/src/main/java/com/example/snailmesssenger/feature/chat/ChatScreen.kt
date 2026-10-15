@@ -23,6 +23,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -112,6 +115,7 @@ fun ChatScreen(
     var showProfileSheet by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
+    var emojiCategory by remember { mutableStateOf("Smileys") }
     var searchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -282,23 +286,63 @@ fun ChatScreen(
                     .padding(top = 7.dp, bottom = 5.dp),
             ) {
                 if (showEmojiPicker) {
-                    Row(
+                    val emojiCategories = listOf(
+                        "Recent" to listOf("😀", "😂", "🥹", "😍", "👍", "❤️", "🔥", "🙏", "🎉", "🤝", "👀", "💯"),
+                        "Smileys" to listOf("😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "🥹", "😊", "😇", "🙂", "🙃", "😉", "😍", "🥰", "😘", "😋", "🤔", "🫡", "😎", "🥳", "😭", "😤", "😴", "🤯", "🥺", "😬", "🤗", "🫶", "🤩", "😌"),
+                        "People" to listOf("👋", "🤚", "✋", "🖐️", "👌", "🤌", "✌️", "🤞", "🫰", "🤟", "🤘", "🤙", "👈", "👉", "👇", "☝️", "👍", "👎", "👏", "🙌", "🫶", "🙏", "💪", "🫂", "🤝", "💅", "👀", "🧠", "👶", "🧑", "👨", "👩"),
+                        "Animals" to listOf("🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🙈", "🐔", "🐧", "🐦", "🦄", "🐝", "🦋", "🐢", "🐬", "🐳", "🦖", "🐙", "🦉", "🦩", "🐾"),
+                        "Food" to listOf("🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍒", "🍑", "🥭", "🍍", "🥥", "🥑", "🍕", "🍔", "🍟", "🌮", "🍜", "🍣", "🍩", "🍪", "🎂", "🍫", "☕", "🧋", "🥤", "🍿"),
+                        "Travel" to listOf("🚗", "🚕", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚲", "🛵", "✈️", "🚀", "🚁", "🚆", "🚇", "🚢", "⛵", "🏝️", "🏖️", "🌋", "🗽", "🗼", "🏰", "🏠", "🌍", "🌙", "⭐", "🌈", "☀️", "❄️"),
+                        "Symbols" to listOf("❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "💕", "💞", "💯", "💢", "💥", "💫", "💦", "💤", "🔥", "✨", "🎉", "🎊", "🎁", "🏆", "⚽", "🎮", "🎵", "✅", "❌", "⚠️", "♻️", "💬", "🔒"),
+                    )
+                    val selectedEmojis = emojiCategories.firstOrNull { it.first == emojiCategory }?.second
+                        ?: emojiCategories[1].second
+                    Column(
                         modifier = Modifier.fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                            .padding(top = 8.dp, bottom = 4.dp),
                     ) {
-                        listOf("😀", "😂", "🥹", "😍", "👍", "❤️", "🔥", "🙏", "🎉", "🤝", "👀", "💯").forEach { emoji ->
-                            Surface(
-                                onClick = { inputText += emoji },
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                            ) {
-                                Text(
-                                    text = emoji,
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
-                                    fontSize = 22.sp,
-                                )
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            emojiCategories.forEach { (category, _) ->
+                                Surface(
+                                    onClick = { emojiCategory = category },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (emojiCategory == category) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.surface,
+                                ) {
+                                    Text(
+                                        text = category,
+                                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (emojiCategory == category) MaterialTheme.colorScheme.onPrimary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 38.dp),
+                            modifier = Modifier.fillMaxWidth().height(164.dp).padding(horizontal = 6.dp, vertical = 4.dp),
+                        ) {
+                            gridItems(selectedEmojis) { emoji ->
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(40.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable {
+                                            inputText += emoji
+                                            showEmojiPicker = false
+                                        },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(text = emoji, fontSize = 24.sp)
+                                }
                             }
                         }
                     }
