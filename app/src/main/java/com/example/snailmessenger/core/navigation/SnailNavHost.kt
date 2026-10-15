@@ -13,20 +13,21 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.snailmessenger.data.preferences.UserPreferences
-import com.example.snailmessenger.feature.auth.LoginScreen
-import com.example.snailmessenger.feature.auth.RegisterScreen
-import com.example.snailmessenger.feature.auth.WelcomeScreen
 import com.example.snailmessenger.feature.chat.ChatDetailScreen
-import com.example.snailmessenger.feature.home.FindPeopleScreen
-import com.example.snailmessenger.feature.home.MainTabsScreen
-import com.example.snailmessenger.feature.profile.ProfileScreen
-import com.example.snailmessenger.feature.settings.AppearanceScreen
-import com.example.snailmessenger.feature.settings.DataStorageScreen
-import com.example.snailmessenger.feature.settings.EditProfileScreen
-import com.example.snailmessenger.feature.settings.NotificationsScreen
-import com.example.snailmessenger.feature.settings.PrivacySecurityScreen
-import com.example.snailmessenger.feature.settings.SettingsScreen
+import com.example.snailmesssenger.data.preferences.UserPreferences
+import com.example.snailmesssenger.data.repository.DemoMessagingRepository
+import com.example.snailmesssenger.feature.auth.LoginScreen
+import com.example.snailmesssenger.feature.auth.RegisterScreen
+import com.example.snailmesssenger.feature.auth.WelcomeScreen
+import com.example.snailmesssenger.feature.home.FindPeopleScreen
+import com.example.snailmesssenger.feature.home.MainTabsScreen
+import com.example.snailmesssenger.feature.profile.ProfileScreen
+import com.example.snailmesssenger.feature.settings.AppearanceScreen
+import com.example.snailmesssenger.feature.settings.DataStorageScreen
+import com.example.snailmesssenger.feature.settings.EditProfileScreen
+import com.example.snailmesssenger.feature.settings.NotificationsScreen
+import com.example.snailmesssenger.feature.settings.PrivacySecurityScreen
+import com.example.snailmesssenger.feature.settings.SettingsScreen
 
 private const val TRANSITION_MS = 280
 
@@ -38,31 +39,16 @@ fun SnailNavHost(
     val animationsEnabled by preferences.animationsEnabled.collectAsState()
 
     val enterTransition = if (animationsEnabled) {
-        fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(
-            animationSpec = spring(stiffness = 420f),
-            initialOffsetX = { it / 3 },
-        )
+        fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(animationSpec = spring(stiffness = 420f), initialOffsetX = { it / 3 })
     } else fadeIn(tween(0))
-
     val exitTransition = if (animationsEnabled) {
-        fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(
-            animationSpec = spring(stiffness = 420f),
-            targetOffsetX = { -it / 3 },
-        )
+        fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(animationSpec = spring(stiffness = 420f), targetOffsetX = { -it / 3 })
     } else fadeOut(tween(0))
-
     val popEnterTransition = if (animationsEnabled) {
-        fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(
-            animationSpec = spring(stiffness = 420f),
-            initialOffsetX = { -it / 3 },
-        )
+        fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(animationSpec = spring(stiffness = 420f), initialOffsetX = { -it / 3 })
     } else fadeIn(tween(0))
-
     val popExitTransition = if (animationsEnabled) {
-        fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(
-            animationSpec = spring(stiffness = 420f),
-            targetOffsetX = { it / 3 },
-        )
+        fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(animationSpec = spring(stiffness = 420f), targetOffsetX = { it / 3 })
     } else fadeOut(tween(0))
 
     NavHost(
@@ -99,12 +85,7 @@ fun SnailNavHost(
                         launchSingleTop = true
                     }
                 },
-                onBackToLogin = {
-                    navController.navigate(SnailRoute.LOGIN) {
-                        popUpTo(SnailRoute.WELCOME) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                },
+                onBackToLogin = { navController.navigate(SnailRoute.LOGIN) { launchSingleTop = true } },
             )
         }
         composable(SnailRoute.HOME) {
@@ -134,10 +115,7 @@ fun SnailNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenSettings = { navController.navigate(SnailRoute.SETTINGS) { launchSingleTop = true } },
                 onLogout = {
-                    navController.navigate(SnailRoute.WELCOME) {
-                        popUpTo(0) { inclusive = true }
-                        launchSingleTop = true
-                    }
+                    navController.navigate(SnailRoute.WELCOME) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
                 },
             )
         }
@@ -152,10 +130,7 @@ fun SnailNavHost(
                 onOpenAppearance = { navController.navigate(SnailRoute.APPEARANCE) { launchSingleTop = true } },
                 onOpenEditProfile = { navController.navigate(SnailRoute.EDIT_PROFILE) { launchSingleTop = true } },
                 onLogout = {
-                    navController.navigate(SnailRoute.WELCOME) {
-                        popUpTo(0) { inclusive = true }
-                        launchSingleTop = true
-                    }
+                    navController.navigate(SnailRoute.WELCOME) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
                 },
             )
         }
@@ -168,7 +143,7 @@ fun SnailNavHost(
             FindPeopleScreen(
                 onBack = { navController.popBackStack() },
                 onStartConversation = { peerId ->
-                    val conversation = com.example.snailmessenger.data.repository.DemoMessagingRepository.startConversationWith(peerId)
+                    val conversation = DemoMessagingRepository.startConversationWith(peerId)
                     navController.popBackStack()
                     navController.navigate(SnailRoute.chat(conversation.id)) { launchSingleTop = true }
                 },
