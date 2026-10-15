@@ -47,6 +47,7 @@ import com.example.snailmesssenger.data.preferences.UserPreferences
 fun AppearanceScreen(
     preferences: UserPreferences,
     onBack: () -> Unit,
+    onOpenChatSettings: () -> Unit = {},
 ) {
     val theme by preferences.theme.collectAsState()
     val animationsEnabled by preferences.animationsEnabled.collectAsState()
@@ -82,8 +83,9 @@ fun AppearanceScreen(
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Chat Wallpaper",
-                subtitle = "Default Snail Minimal",
+                subtitle = "Customize colors and doodles",
                 icon = Icons.Default.Palette,
+                onClick = onOpenChatSettings,
             )
 
             Spacer(Modifier.height(Spacing.xl))
