@@ -58,9 +58,6 @@ import com.example.snailmesssenger.feature.security.SecurityViewModel
 import com.example.snailmesssenger.feature.security.SnailPasswordTextField
 import kotlinx.coroutines.launch
 
-private val TelegramBlue = Color(0xFF2481CC)
-private val LoginHint = Color(0xFF8A96A3)
-private val LoginBorder = Color(0xFFE0E0E0)
 
 @Composable
 fun LoginScreen(
@@ -106,7 +103,7 @@ fun LoginScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
-            FloatingActionButton(onClick = { if (!isLoading) submit() }, containerColor = TelegramBlue, contentColor = Color.White, modifier = Modifier.padding(bottom = 12.dp, end = 4.dp).size(58.dp)) {
+            FloatingActionButton(onClick = { if (!isLoading) submit() }, containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White, modifier = Modifier.padding(bottom = 12.dp, end = 4.dp).size(58.dp)) {
                 if (isLoading) CircularProgressIndicator(Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp) else Icon(Icons.Default.ArrowForward, "Log in", Modifier.size(25.dp))
             }
         },
@@ -116,28 +113,28 @@ fun LoginScreen(
             Spacer(Modifier.height(30.dp))
             Text("Welcome to Snail", fontSize = 25.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            Text("Please enter your username and password to log in.", fontSize = 14.sp, color = LoginHint, modifier = Modifier.fillMaxWidth(0.92f))
+            Text("Please enter your username and password to log in.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth(0.92f))
             Spacer(Modifier.height(30.dp))
             ValidatedLoginInput(username, { username = it; usernameError = null; generalError = null }, "Username", "At least 3 characters", usernameError, username.length >= 3, { Icon(Icons.Default.PersonOutline, null) }, KeyboardType.Text, ImeAction.Next)
             Spacer(Modifier.height(16.dp))
             SnailPasswordTextField(value = password, onValueChange = { password = it; passwordError = null; generalError = null; securityViewModel.updatePassword(it, showPassword) }, passwordVisible = showPassword, onToggleVisibility = { showPassword = !showPassword; securityViewModel.setPasswordVisibility(showPassword) }, error = passwordError)
             Spacer(Modifier.height(12.dp))
-            TextButton(onClick = { showOptional = !showOptional }, Modifier.align(Alignment.Start)) { Icon(if (showOptional) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = TelegramBlue); Text(if (showOptional) "Hide optional details" else "Optional details", color = TelegramBlue, modifier = Modifier.padding(start = 8.dp)) }
+            TextButton(onClick = { showOptional = !showOptional }, Modifier.align(Alignment.Start)) { Icon(if (showOptional) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = MaterialTheme.colorScheme.primary); Text(if (showOptional) "Hide optional details" else "Optional details", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp)) }
             AnimatedVisibility(showOptional) { Column(Modifier.fillMaxWidth().animateContentSize(spring(stiffness = 500f)), verticalArrangement = Arrangement.spacedBy(16.dp)) { SimpleInput(email, { email = it }, "Email address (optional)", "name@example.com", Icons.Default.MailOutline, KeyboardType.Email); SimpleInput(phone, { phone = it }, "Phone number (optional)", "Phone number", Icons.Default.Phone, KeyboardType.Phone) } }
             Spacer(Modifier.height(optionalGap))
             generalError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth()) }
             Spacer(Modifier.height(18.dp))
-            TextButton(onClick = onCreateAccount, Modifier.padding(bottom = 78.dp)) { Text("New to Snail? Create an account", color = TelegramBlue, fontWeight = FontWeight.Medium) }
+            TextButton(onClick = onCreateAccount, Modifier.padding(bottom = 78.dp)) { Text("New to Snail? Create an account", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium) }
         }
     }
 }
 
 @Composable
 private fun ValidatedLoginInput(value: String, onValueChange: (String) -> Unit, label: String, placeholder: String, error: String?, valid: Boolean, leadingIcon: @Composable () -> Unit, keyboardType: KeyboardType, imeAction: ImeAction) {
-    OutlinedTextField(value = value, onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(), label = { Text(label) }, placeholder = { Text(placeholder, color = LoginHint) }, leadingIcon = leadingIcon, trailingIcon = if (value.isNotEmpty() && valid) ({ Text("✓", color = Color(0xFF35B66F), fontWeight = FontWeight.Bold) }) else null, isError = error != null, supportingText = error?.let { { Text(it) } }, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TelegramBlue, unfocusedBorderColor = LoginBorder, focusedLabelColor = TelegramBlue, cursorColor = TelegramBlue))
+    OutlinedTextField(value = value, onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(), label = { Text(label) }, placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) }, leadingIcon = leadingIcon, trailingIcon = if (value.isNotEmpty() && valid) ({ Text("✓", color = Color(0xFF35B66F), fontWeight = FontWeight.Bold) }) else null, isError = error != null, supportingText = error?.let { { Text(it) } }, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant, focusedLabelColor = MaterialTheme.colorScheme.primary, cursorColor = MaterialTheme.colorScheme.primary))
 }
 
 @Composable
 private fun SimpleInput(value: String, onValueChange: (String) -> Unit, label: String, placeholder: String, icon: androidx.compose.ui.graphics.vector.ImageVector, keyboardType: KeyboardType) {
-    OutlinedTextField(value = value, onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(), label = { Text(label) }, placeholder = { Text(placeholder, color = LoginHint) }, leadingIcon = { Icon(icon, null) }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType), singleLine = true)
+    OutlinedTextField(value = value, onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(), label = { Text(label) }, placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) }, leadingIcon = { Icon(icon, null) }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType), singleLine = true)
 }
