@@ -14,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.snailmessenger.feature.chat.ChatDetailScreen
+import com.example.snailmesssenger.core.navigation.SnailRoute
 import com.example.snailmesssenger.data.preferences.UserPreferences
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import com.example.snailmesssenger.feature.auth.LoginScreen
