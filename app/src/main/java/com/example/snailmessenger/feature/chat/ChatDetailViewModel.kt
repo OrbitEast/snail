@@ -14,6 +14,7 @@ class ChatDetailViewModel : ViewModel() {
         if (_uiState.value.conversationId == conversationId && _uiState.value.messages.isNotEmpty()) return
 
         val peer = when (conversationId) {
+            "saved" -> "Saved Messages" to "Saved Messages"
             "maya" -> "Maya Kapoor" to "mayakapoor"
             "arjun" -> "Arjun Mehta" to "arjunm"
             "riya" -> "Riya Sharma" to "riya"
@@ -26,19 +27,16 @@ class ChatDetailViewModel : ViewModel() {
             conversationId = conversationId,
             title = peer.first,
             username = peer.second,
-            isOnline = true,
+            isOnline = conversationId != "saved",
             messages = mockMessages(conversationId),
         )
     }
 
-    fun updateDraft(text: String) {
-        _uiState.update { it.copy(draft = text) }
-    }
+    fun updateDraft(text: String) { _uiState.update { it.copy(draft = text) } }
 
     fun sendMessage(text: String = _uiState.value.draft) {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
-
         _uiState.update { state ->
             state.copy(
                 messages = state.messages + Message(
@@ -54,7 +52,12 @@ class ChatDetailViewModel : ViewModel() {
         }
     }
 
-    private fun mockMessages(conversationId: String): List<Message> = listOf(
+    private fun mockMessages(conversationId: String): List<Message> = if (conversationId == "saved") {
+        listOf(
+            Message("saved-1", "me", "Saved Messages is your private local note space.", "Today", true, true),
+            Message("saved-2", "me", "You can use it for links, notes and reminders.", "Today", true, true),
+        )
+    } else listOf(
         Message("1", conversationId, "Hey! How is the new Snail build going?", "19:41", false),
         Message("2", "me", "Pretty good. I just finished the login flow.", "19:43", true, true),
         Message("3", conversationId, "Nice. The transitions looked really smooth.", "19:44", false),
