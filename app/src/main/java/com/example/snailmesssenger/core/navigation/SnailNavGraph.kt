@@ -218,7 +218,11 @@ fun SnailNavGraph(
             DataStorageScreen(onBack = { navController.popBackStack() })
         }
         composable(SnailRoute.APPEARANCE) {
-            AppearanceScreen(preferences = preferences, onBack = { navController.popBackStack() })
+            AppearanceScreen(
+                preferences = preferences,
+                onBack = { navController.popBackStack() },
+                onOpenChatSettings = { navController.navigate(SnailRoute.CHAT_SETTINGS) { launchSingleTop = true } },
+            )
         }
         composable(SnailRoute.EDIT_PROFILE) {
             EditProfileScreen(onBack = { navController.popBackStack() })
