@@ -14,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.snailmessenger.feature.chat.ChatDetailScreen
+import com.example.snailmesssenger.feature.call.CallSessionScreen
 import com.example.snailmesssenger.core.navigation.SnailRoute
 import com.example.snailmesssenger.data.preferences.UserPreferences
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
@@ -82,7 +83,12 @@ fun SnailNavHost(navController: NavHostController = rememberNavController(), pre
         }
         composable(SnailRoute.CHAT) { entry ->
             val conversationId = entry.arguments?.getString("conversationId") ?: return@composable
-            ChatDetailScreen(conversationId = conversationId, onBack = { navController.popBackStack() })
+            ChatDetailScreen(conversationId = conversationId, onBack = { navController.popBackStack() }, onStartCall = { kind -> navController.navigate(SnailRoute.call(conversationId, kind)) { launchSingleTop = true } })
+        }
+        composable(SnailRoute.CALL) { entry ->
+            val conversationId = entry.arguments?.getString("conversationId") ?: return@composable
+            val kind = entry.arguments?.getString("kind") ?: "voice"
+            CallSessionScreen(conversationId = conversationId, kindArg = kind, onBack = { navController.popBackStack() })
         }
         composable(SnailRoute.PROFILE) {
             ProfileScreen(onBack = { navController.popBackStack() }, onOpenSettings = { navController.navigate(SnailRoute.SETTINGS) { launchSingleTop = true } }, onLogout = { navController.navigate(SnailRoute.WELCOME) { popUpTo(0) { inclusive = true }; launchSingleTop = true } })
