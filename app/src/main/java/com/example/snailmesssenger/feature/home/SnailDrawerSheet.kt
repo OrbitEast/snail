@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -22,15 +21,12 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -41,19 +37,19 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.snailmesssenger.core.designsystem.ThemePreference
 import com.example.snailmesssenger.data.preferences.UserPreferences
-import kotlinx.coroutines.launch
 
 private val DrawerBlue = Color(0xFF2481CC)
 private val DrawerDark = Color(0xFF1C2733)
@@ -72,9 +68,8 @@ fun SnailDrawerSheet(
     onOpenHelp: () -> Unit,
     viewModel: DrawerViewModel = viewModel(),
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycleCompat()
+    val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val dark = preferences.theme.value == ThemePreference.DARK
     val surface = if (dark) DrawerDark else Color.White
     val primaryText = if (dark) Color.White else Color(0xFF222222)
@@ -89,8 +84,6 @@ fun SnailDrawerSheet(
                 DrawerHeader(
                     state = state,
                     dark = dark,
-                    primaryText = primaryText,
-                    secondaryText = secondaryText,
                     onToggleAccountSwitcher = viewModel::toggleAccountSwitcher,
                     onToggleTheme = {
                         preferences.setTheme(if (dark) ThemePreference.LIGHT else ThemePreference.DARK)
@@ -99,42 +92,19 @@ fun SnailDrawerSheet(
                     onAddAccount = { onOpenProfile(); onClose() },
                 )
             }
-
             item { HorizontalDivider(color = if (dark) Color(0xFF30404D) else Color(0xFFE4E8EC)) }
-
+            item { DrawerItem(Icons.Default.Person, "My Profile", primaryText) { onOpenProfile(); onClose() } }
+            item { DrawerItem(Icons.Default.Bookmark, "Saved Messages", primaryText) { onOpenSavedMessages(); onClose() } }
+            item { DrawerItem(Icons.Default.Group, "New Group", primaryText) { viewModel.showNewGroup() } }
+            item { DrawerItem(Icons.Default.Person, "Contacts", primaryText) { onOpenContacts(); onClose() } }
+            item { DrawerItem(Icons.Default.Call, "Calls", primaryText) { onOpenCalls(); onClose() } }
+            item { DrawerItem(Icons.Default.Settings, "Settings", primaryText) { onOpenSettings(); onClose() } }
             item {
-                DrawerItem(Icons.Default.Person, "My Profile", primaryText) {
-                    onOpenProfile(); onClose()
-                }
+                HorizontalDivider(
+                    color = if (dark) Color(0xFF30404D) else Color(0xFFE4E8EC),
+                    modifier = Modifier.padding(vertical = 6.dp),
+                )
             }
-            item {
-                DrawerItem(Icons.Default.Bookmark, "Saved Messages", primaryText) {
-                    onOpenSavedMessages(); onClose()
-                }
-            }
-            item {
-                DrawerItem(Icons.Default.Group, "New Group", primaryText) {
-                    viewModel.showNewGroup()
-                }
-            }
-            item {
-                DrawerItem(Icons.Default.Person, "Contacts", primaryText) {
-                    onOpenContacts(); onClose()
-                }
-            }
-            item {
-                DrawerItem(Icons.Default.Call, "Calls", primaryText) {
-                    onOpenCalls(); onClose()
-                }
-            }
-            item {
-                DrawerItem(Icons.Default.Settings, "Settings", primaryText) {
-                    onOpenSettings(); onClose()
-                }
-            }
-
-            item { HorizontalDivider(color = if (dark) Color(0xFF30404D) else Color(0xFFE4E8EC), modifier = Modifier.padding(vertical = 6.dp)) }
-
             item {
                 DrawerItem(Icons.Default.PersonAdd, "Invite Friends", primaryText) {
                     runCatching {
@@ -151,12 +121,7 @@ fun SnailDrawerSheet(
                     onClose()
                 }
             }
-            item {
-                DrawerItem(Icons.Default.HelpOutline, "Snail Features / FAQ", primaryText) {
-                    viewModel.showHelp()
-                }
-            }
-
+            item { DrawerItem(Icons.Default.HelpOutline, "Snail Features / FAQ", primaryText) { viewModel.showHelp() } }
             item {
                 Spacer(Modifier.height(20.dp))
                 Text(
@@ -187,24 +152,19 @@ fun SnailDrawerSheet(
         )
     }
 
-    if (state.showNewGroup) {
-        NewGroupDialog(onDismiss = viewModel::dismissNewGroup)
-    }
+    if (state.showNewGroup) NewGroupDialog(onDismiss = viewModel::dismissNewGroup)
 }
 
 @Composable
 private fun DrawerHeader(
     state: DrawerUiState,
     dark: Boolean,
-    primaryText: Color,
-    secondaryText: Color,
     onToggleAccountSwitcher: () -> Unit,
     onToggleTheme: () -> Unit,
     onSelectAccount: (Int) -> Unit,
     onAddAccount: () -> Unit,
 ) {
     val active = state.accounts.firstOrNull { it.isActive } ?: state.accounts.first()
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,7 +174,6 @@ private fun DrawerHeader(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onToggleTheme) {
                 Icon(
@@ -224,7 +183,6 @@ private fun DrawerHeader(
                 )
             }
         }
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -253,7 +211,6 @@ private fun DrawerHeader(
                 tint = Color.White,
             )
         }
-
         if (state.accountSwitcherExpanded) {
             Spacer(Modifier.height(10.dp))
             state.accounts.forEachIndexed { index, account ->
@@ -289,7 +246,12 @@ private fun DrawerHeader(
 }
 
 @Composable
-private fun DrawerItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, textColor: Color, onClick: () -> Unit) {
+private fun DrawerItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    textColor: Color,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -303,7 +265,7 @@ private fun DrawerItem(icon: androidx.compose.ui.graphics.vector.ImageVector, ti
 }
 
 @Composable
-private fun AvatarCircle(initials: String, size: androidx.compose.ui.unit.Dp) {
+private fun AvatarCircle(initials: String, size: Dp) {
     Box(
         modifier = Modifier.size(size).background(Color(0xFF5B9BD5), CircleShape),
         contentAlignment = Alignment.Center,
@@ -328,15 +290,13 @@ private fun NewGroupDialog(onDismiss: () -> Unit) {
                         Text(name, modifier = Modifier.padding(start = 12.dp))
                     }
                 }
-                Text("Select members to continue. Group persistence will be added with the local data layer.", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Select members to continue. Group persistence will be added with the local data layer.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
-}
-
-@Composable
-private fun DrawerViewModel.collectAsStateWithLifecycleCompat(): androidx.compose.runtime.State<DrawerUiState> {
-    return androidx.compose.runtime.collectAsState(this.uiState)
 }
