@@ -13,7 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import com.example.snailmesssenger.feature.theme.SnailTheme
 import com.example.snailmesssenger.feature.theme.ThemeViewModel
-import com.example.snailmesssenger.core.navigation.SnailNavHost
+import com.example.snailmesssenger.core.navigation.SnailNavGraph
 import com.example.snailmesssenger.data.preferences.UserPreferences
 import com.example.snailmesssenger.data.repository.DemoAuthRepository
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
 
             SnailTheme(state = themeState) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    SnailNavHost(preferences = preferences)
+                    SnailNavGraph(preferences = preferences)
                 }
             }
         }
