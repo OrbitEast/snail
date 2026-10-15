@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import com.example.snailmesssenger.core.designsystem.SnailTheme
 import com.example.snailmesssenger.core.navigation.SnailNavHost
 import com.example.snailmesssenger.data.preferences.UserPreferences
+import com.example.snailmesssenger.data.repository.DemoAuthRepository
+import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,6 +22,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val context = this@MainActivity
+        DemoAuthRepository.initialize(applicationContext)
+        DemoMessagingRepository.initialize(applicationContext)
         setContent {
             val preferences = remember { UserPreferences(context) }
             val theme by preferences.theme.collectAsState()
