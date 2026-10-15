@@ -51,6 +51,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.example.snailmesssenger.feature.theme.ThemeViewModel
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +72,8 @@ fun ChatDetailScreen(
     viewModel: ChatDetailViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val themeViewModel: ThemeViewModel = viewModel()
+    val themeState by themeViewModel.state.collectAsState()
     val attachmentViewModel: AttachmentViewModel = viewModel()
     val attachmentState by attachmentViewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
@@ -85,7 +90,7 @@ fun ChatDetailScreen(
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.fillMaxSize().imePadding(),
-        containerColor = Color(0xFFE7EBF0),
+        containerColor = runCatching { Color(android.graphics.Color.parseColor(themeState.wallpaperHex)) }.getOrDefault(Color(0xFFE7EBF0)),
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -146,7 +151,7 @@ fun ChatDetailScreen(
         Box(
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            ChatDoodleBackground()
+            ChatDoodleBackground(themeState.wallpaperHex, themeState.wallpaperUri, themeState.doodlePattern)
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().padding(vertical = 8.dp),
@@ -261,26 +266,39 @@ private fun MessageInputBar(
 }
 
 @Composable
-private fun ChatDoodleBackground() {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val effect = PathEffect.dashPathEffect(floatArrayOf(8f, 14f), 0f)
-        drawCircle(
-            color = Color(0xFFCFD6DE).copy(alpha = 0.25f),
-            radius = 34f,
-            center = center.copy(x = center.x * 0.45f, y = center.y * 0.25f),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f, pathEffect = effect),
-        )
-        drawCircle(
-            color = Color(0xFFCFD6DE).copy(alpha = 0.22f),
-            radius = 22f,
-            center = center.copy(x = center.x * 1.6f, y = center.y * 1.45f),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f),
-        )
-        drawLine(
-            color = Color(0xFFCFD6DE).copy(alpha = 0.22f),
-            start = androidx.compose.ui.geometry.Offset(40f, size.height * 0.6f),
-            end = androidx.compose.ui.geometry.Offset(140f, size.height * 0.53f),
-            strokeWidth = 2f,
-        )
+private fun ChatDoodleBackground(wallpaperHex: String, wallpaperUri: String?, doodlesEnabled: Boolean) {
+    val wallpaperColor = runCatching { Color(android.graphics.Color.parseColor(wallpaperHex)) }.getOrDefault(Color(0xFFE7EBF0))
+    Box(modifier = Modifier.fillMaxSize().background(wallpaperColor)) {
+        if (wallpaperUri != null) {
+            AsyncImage(
+                model = wallpaperUri,
+                contentDescription = "Chat wallpaper",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
+        if (doodlesEnabled) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val effect = PathEffect.dashPathEffect(floatArrayOf(8f, 14f), 0f)
+                drawCircle(
+                    color = Color(0xFFCFD6DE).copy(alpha = 0.25f),
+                    radius = 34f,
+                    center = center.copy(x = center.x * 0.45f, y = center.y * 0.25f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f, pathEffect = effect),
+                )
+                drawCircle(
+                    color = Color(0xFFCFD6DE).copy(alpha = 0.22f),
+                    radius = 22f,
+                    center = center.copy(x = center.x * 1.6f, y = center.y * 1.45f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f),
+                )
+                drawLine(
+                    color = Color(0xFFCFD6DE).copy(alpha = 0.22f),
+                    start = androidx.compose.ui.geometry.Offset(40f, size.height * 0.6f),
+                    end = androidx.compose.ui.geometry.Offset(140f, size.height * 0.53f),
+                    strokeWidth = 2f,
+                )
+            }
+        }
     }
 }
