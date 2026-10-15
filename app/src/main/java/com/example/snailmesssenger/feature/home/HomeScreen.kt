@@ -139,6 +139,44 @@ fun HomeScreen(
                     }
                 }
 
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Your space. Your people.",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                text = if (unreadTotal > 0) "You have $unreadTotal unread ${if (unreadTotal == 1) "message" else "messages"}" else "Private chats, at your pace.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.size(44.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChatBubbleOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    }
+                }
+
                 SearchField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -373,7 +411,7 @@ private fun ConversationRow(conversation: Conversation, onClick: () -> Unit) {
         Row(
             modifier = Modifier.fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 18.dp, vertical = 10.dp),
+                .padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SnailAvatar(
