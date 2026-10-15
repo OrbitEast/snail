@@ -73,7 +73,6 @@ fun SnailDrawerSheet(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val themeViewModel: ThemeViewModel = viewModel()
-    val themeState by themeViewModel.state.collectAsState()
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val surface = MaterialTheme.colorScheme.surface
     val primaryText = MaterialTheme.colorScheme.onSurface
