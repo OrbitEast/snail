@@ -58,7 +58,7 @@ fun CallSessionScreen(
         }
     }
 
-    if (state.status == CallStatus.ENDED) {
+    if (state.status == CallStatus.ENDED && state.kind == CallKind.VIDEO) {
         LaunchedEffect(state.status) {
             kotlinx.coroutines.delay(850)
             onBack()
