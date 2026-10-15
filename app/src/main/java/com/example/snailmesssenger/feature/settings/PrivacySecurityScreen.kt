@@ -16,7 +16,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,18 +60,18 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             SnailSectionHeading("Privacy")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(title = "Last Seen & Online", subtitle = "$lastSeenOption · local preview", icon = Icons.Default.Visibility, onClick = { lastSeenOption = if (lastSeenOption == "My Contacts") "Nobody" else "My Contacts" })
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(title = "Profile Photo", subtitle = "$photoOption · local preview", icon = Icons.Default.Security, onClick = { photoOption = if (photoOption == "Everybody") "My Contacts" else "Everybody" })
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(title = "Blocked Users", subtitle = "0 blocked", icon = Icons.Default.Block, onClick = { unsupportedFeature = "Blocked Users" })
 
             Spacer(Modifier.height(Spacing.xl))
             SnailSectionHeading("Security")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(title = "Passcode Lock", subtitle = if (passcodeEnabled) "Enabled" else "Disabled", icon = Icons.Default.Lock, onClick = { passcodeEnabled = !passcodeEnabled })
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
 
             androidx.compose.foundation.layout.Row(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp)) {
                 Column(Modifier.weight(1f)) {
@@ -82,7 +82,7 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
                     if (enabled) showPinDialog = true else securityViewModel.disableTwoStep()
                 })
             }
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(title = "Active Sessions", subtitle = "Mobile · Desktop · Web", icon = Icons.Default.Devices, onClick = { unsupportedFeature = "Active Sessions" })
             Spacer(Modifier.height(Spacing.xxxl))
         }

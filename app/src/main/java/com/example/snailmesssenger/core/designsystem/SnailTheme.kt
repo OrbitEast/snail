@@ -13,10 +13,10 @@ import androidx.compose.ui.graphics.Color
 enum class ThemePreference { SYSTEM, LIGHT, DARK }
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
+    primary = TelegramBlue,
     onPrimary = Color.White,
-    primaryContainer = LightBlueAccent,
-    onPrimaryContainer = DeepNavy,
+    primaryContainer = TelegramLightBlue,
+    onPrimaryContainer = PrimaryText,
     background = LightBackground,
     onBackground = PrimaryText,
     surface = MainSurface,
@@ -30,7 +30,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimaryBlue,
+    primary = TelegramBlue,
     onPrimary = Color.White,
     primaryContainer = DarkElevatedSurface,
     onPrimaryContainer = DarkPrimaryText,

@@ -17,7 +17,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -76,14 +76,14 @@ fun AppearanceScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             SnailSectionHeading(text = "Theme & Colors")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "App Theme",
                 subtitle = themeState.nightMode.label,
                 icon = Icons.Default.DarkMode,
                 onClick = { showThemeDialog = true },
             )
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Chat Wallpaper",
                 subtitle = "Customize colors and doodles",
@@ -94,7 +94,7 @@ fun AppearanceScreen(
             Spacer(Modifier.height(Spacing.xl))
 
             SnailSectionHeading(text = "Motion")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Smooth Animations",
                 subtitle = if (animationsEnabled) "Telegram-style transitions enabled" else "Disabled",

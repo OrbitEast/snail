@@ -13,7 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,7 +71,7 @@ fun NotificationsScreen(
                 modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
             )
             SnailSectionHeading(text = "Chats Notifications")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Private Chats",
                 subtitle = if (chatsNotifications) "Enabled" else "Disabled",
@@ -80,7 +80,7 @@ fun NotificationsScreen(
                     Switch(checked = chatsNotifications, onCheckedChange = { chatsNotifications = it; preferences.privateChatNotifications = it })
                 },
             )
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Message Previews",
                 subtitle = "Show text in notification",
@@ -93,7 +93,7 @@ fun NotificationsScreen(
             Spacer(Modifier.height(Spacing.xl))
 
             SnailSectionHeading(text = "Sounds & Vibration")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Sound",
                 subtitle = "Default",
@@ -102,7 +102,7 @@ fun NotificationsScreen(
                     Switch(checked = soundEnabled, onCheckedChange = { soundEnabled = it; preferences.notificationSound = it })
                 },
             )
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Vibration",
                 subtitle = "Default",
@@ -115,7 +115,7 @@ fun NotificationsScreen(
             Spacer(Modifier.height(Spacing.xl))
 
             SnailSectionHeading(text = "In-App Notifications")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "In-App Sounds",
                 subtitle = "Play sound when app is open",

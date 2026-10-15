@@ -3,7 +3,7 @@ messenger with modern feel and high privacy
 
 ## Android testing APK
 
-- **Current test version:** 1.6
+- **Current test version:** 2.1
 - **[How to download the latest APK](TESTING.md)**
 - **[Build APK with GitHub Actions](https://github.com/OrbitEast/snail/actions/workflows/android-apk.yml)**
 
