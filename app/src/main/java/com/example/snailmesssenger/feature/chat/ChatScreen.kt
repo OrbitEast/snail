@@ -37,7 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -162,8 +162,6 @@ fun ChatScreen(
                                 displayId = conversation.peer.id,
                                 displayName = conversation.peer.displayName,
                                 size = 42,
-                                showOnlineIndicator = true,
-                                isOnline = conversation.peer.isOnline,
                             )
                             Spacer(Modifier.width(10.dp))
                             Column {
@@ -175,11 +173,9 @@ fun ChatScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    text = if (conversation.peer.isOnline) "online" else "@${conversation.peer.username}",
+                                    text = "@${conversation.peer.username}",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = if (conversation.peer.isOnline)
-                                        com.example.snailmesssenger.core.designsystem.SuccessGreen
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -526,7 +522,7 @@ private fun MessageBubble(message: Message) {
                         if (outgoing) {
                             Spacer(Modifier.width(4.dp))
                             Icon(
-                                imageVector = Icons.Default.DoneAll,
+                                imageVector = Icons.Default.Done,
                                 contentDescription = "Sent",
                                 modifier = Modifier.size(15.dp),
                                 tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.88f),
