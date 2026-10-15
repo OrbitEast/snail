@@ -37,6 +37,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.MoreVert
@@ -63,16 +66,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.snailmesssenger.core.designsystem.SnailAvatar
 import com.example.snailmesssenger.core.designsystem.Spacing
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.snailmesssenger.feature.media.AttachmentViewModel
+import com.example.snailmesssenger.feature.media.SnailAttachmentBottomSheet
+import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
+import com.example.snailmesssenger.feature.theme.LocalChatTextSize
+import com.example.snailmesssenger.feature.theme.LocalSnailThemeState
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -83,7 +95,12 @@ import java.util.Locale
 fun ChatScreen(
     conversationId: String,
     onBack: () -> Unit,
+    onVoiceCall: () -> Unit = {},
+    onVideoCall: () -> Unit = {},
 ) {
+    val attachmentViewModel: AttachmentViewModel = viewModel(key = "attachments-$conversationId")
+    val attachmentState by attachmentViewModel.uiState.collectAsState()
+    val themeState = LocalSnailThemeState.current
     val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
     val conversation = conversations.firstOrNull { it.id == conversationId }
     if (conversation == null) {
@@ -151,7 +168,7 @@ fun ChatScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding(),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = parseChatColor(themeState.wallpaperHex),
         topBar = {
             Column {
                 TopAppBar(
@@ -196,6 +213,12 @@ fun ChatScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = onVoiceCall) {
+                            Icon(Icons.Default.Call, contentDescription = "Start voice call")
+                        }
+                        IconButton(onClick = onVideoCall) {
+                            Icon(Icons.Default.Videocam, contentDescription = "Start video call")
+                        }
                         IconButton(onClick = {
                             if (searchVisible) {
                                 searchVisible = false
@@ -366,6 +389,12 @@ fun ChatScreen(
                         verticalAlignment = Alignment.Bottom,
                     ) {
                         IconButton(
+                            onClick = { attachmentViewModel.showSheet() },
+                            modifier = Modifier.size(38.dp),
+                        ) {
+                            Icon(Icons.Default.AttachFile, contentDescription = "Attach media", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(
                             onClick = { showEmojiPicker = !showEmojiPicker },
                             modifier = Modifier.size(42.dp),
                         ) {
@@ -429,10 +458,27 @@ fun ChatScreen(
             }
         },
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier.fillMaxSize().padding(padding)
-                .background(MaterialTheme.colorScheme.background),
+                .background(parseChatColor(themeState.wallpaperHex)),
         ) {
+            themeState.wallpaperUri?.let { wallpaperUri ->
+                AsyncImage(
+                    model = wallpaperUri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            if (themeState.doodlePattern) {
+                Text(
+                    text = "◌  ✳  ⌁  ◇  ☼  ♧  ◌",
+                    modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+            }
+            Column(modifier = Modifier.fillMaxSize()) {
             if (searchVisible && searchQuery.isNotBlank()) {
                 Text(
                     text = "${filteredMessages.size} matching message${if (filteredMessages.size == 1) "" else "s"}",
@@ -477,9 +523,34 @@ fun ChatScreen(
                     }
                 }
             }
+            }
         }
     }
 
+    if (attachmentState.isSheetVisible) {
+        SnailAttachmentBottomSheet(
+            state = attachmentState,
+            onDismiss = attachmentViewModel::hideSheet,
+            onShortcut = attachmentViewModel::setShortcut,
+            onToggleMedia = attachmentViewModel::toggleSelection,
+            onPreview = attachmentViewModel::openPreview,
+        )
+    }
+    if (attachmentState.isPreviewVisible) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = attachmentViewModel::closePreview,
+            title = { Text("Media preview") },
+            text = { Text("Selected media is ready for the local demo. Network upload is not configured.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    attachmentViewModel.sendSelected { _, _, _, _ -> }
+                }) { Text("Done") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = attachmentViewModel::closePreview) { Text("Back") }
+            },
+        )
+    }
     if (showProfileSheet) {
         PeerProfileSheet(
             peer = conversation.peer,
@@ -491,6 +562,8 @@ fun ChatScreen(
 
 @Composable
 private fun MessageBubble(message: Message) {
+    val messageFontSize = LocalChatTextSize.current
+    val bubbleRadius = LocalChatBubbleRadius.current
     val outgoing = message.isOutgoing
     val bubbleColor = if (outgoing) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.surface
@@ -506,10 +579,10 @@ private fun MessageBubble(message: Message) {
                 color = bubbleColor,
                 contentColor = textColor,
                 shape = RoundedCornerShape(
-                    topStart = 18.dp,
-                    topEnd = 18.dp,
-                    bottomStart = if (outgoing) 18.dp else 5.dp,
-                    bottomEnd = if (outgoing) 5.dp else 18.dp,
+                    topStart = bubbleRadius,
+                    topEnd = bubbleRadius,
+                    bottomStart = if (outgoing) bubbleRadius else 5.dp,
+                    bottomEnd = if (outgoing) 5.dp else bubbleRadius,
                 ),
                 shadowElevation = if (outgoing) 1.dp else 0.dp,
                 modifier = Modifier.widthIn(max = 320.dp),
@@ -520,7 +593,7 @@ private fun MessageBubble(message: Message) {
                 ) {
                     Text(
                         text = message.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 21.sp),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = messageFontSize, lineHeight = messageFontSize * 1.3f),
                         color = textColor,
                     )
                     Spacer(Modifier.height(3.dp))
@@ -549,3 +622,6 @@ private fun MessageBubble(message: Message) {
 private fun formatTime(ms: Long): String =
     SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
 
+
+private fun parseChatColor(hex: String): Color =
+    runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color(0xFFE7EBF0))

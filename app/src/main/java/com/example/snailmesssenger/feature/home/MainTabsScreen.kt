@@ -1,41 +1,26 @@
 package com.example.snailmesssenger.feature.home
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubble
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.DrawerValue
-import kotlinx.coroutines.launch
 import com.example.snailmesssenger.data.preferences.UserPreferences
 import com.example.snailmesssenger.feature.profile.ProfileScreen
 import com.example.snailmesssenger.feature.settings.SettingsScreen
+import kotlinx.coroutines.launch
 
-/**
- * Main app shell: a compact messenger-first layout with a familiar navigation drawer.
- * Screen content stays native Compose and all destinations remain interactive.
- */
 @Composable
 fun MainTabsScreen(
     preferences: UserPreferences,
@@ -47,90 +32,47 @@ fun MainTabsScreen(
     onOpenAppearance: () -> Unit,
     onOpenEditProfile: () -> Unit,
     onLogout: () -> Unit,
+    onOpenChatSettings: () -> Unit = onOpenAppearance,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    var showCalls by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    fun closeDrawer() = scope.launch { drawerState.close() }
     fun selectTab(index: Int) {
         selectedTab = index
-        scope.launch { drawerState.close() }
+        closeDrawer()
     }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = selectedTab == 0,
         drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(top = 28.dp, bottom = 16.dp),
-                ) {
-                    Text(
-                        text = "SNAIL Messenger",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 18.dp),
-                    )
-                    Text(
-                        text = "YOUR SPACE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("Chats") },
-                        selected = selectedTab == 0,
-                        onClick = { selectTab(0) },
-                        icon = { Icon(Icons.Default.ChatBubble, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("Contacts") },
-                        selected = selectedTab == 1,
-                        onClick = { selectTab(1) },
-                        icon = { Icon(Icons.Default.People, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = "ACCOUNT",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("Settings") },
-                        selected = selectedTab == 2,
-                        onClick = { selectTab(2) },
-                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("Profile") },
-                        selected = selectedTab == 3,
-                        onClick = { selectTab(3) },
-                        icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                }
-            }
+            SnailDrawerSheet(
+                preferences = preferences,
+                onClose = { closeDrawer() },
+                onOpenChats = { selectTab(0) },
+                onOpenProfile = { selectTab(3) },
+                onOpenContacts = { selectTab(1) },
+                onOpenCalls = { showCalls = true; closeDrawer() },
+                onOpenSavedMessages = { onOpenChat("saved"); closeDrawer() },
+                onOpenSettings = onOpenChatSettings,
+                onOpenHelp = { },
+            )
         },
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
             when (selectedTab) {
-                0 -> HomeScreen(
-                    onOpenChat = onOpenChat,
-                    onOpenProfile = { selectTab(3) },
-                    onOpenSettings = { selectTab(2) },
-                    onFindPeople = { selectTab(1) },
+                0 -> ChatListScreen(
                     onOpenMenu = { scope.launch { drawerState.open() } },
-                    onLogout = onLogout,
+                    onOpenChat = onOpenChat,
+                    onNewChat = onFindPeople,
                 )
                 1 -> FindPeopleScreen(
                     onBack = { selectTab(0) },
                     onStartConversation = { peerId ->
-                        val conversation = com.example.snailmesssenger.data.repository.DemoMessagingRepository
-                            .startConversationWith(peerId)
+                        val conversation = com.example.snailmesssenger.data.repository.DemoMessagingRepository.startConversationWith(peerId)
                         onOpenChat(conversation.id)
                     },
                 )
@@ -152,5 +94,16 @@ fun MainTabsScreen(
                 )
             }
         }
+    }
+
+    if (showCalls) {
+        AlertDialog(
+            onDismissRequest = { showCalls = false },
+            title = { Text("Calls") },
+            text = {
+                Text("Call history\n\nNo calls yet. Incoming, outgoing and missed call indicators are ready for the local call layer.")
+            },
+            confirmButton = { TextButton(onClick = { showCalls = false }) { Text("Done") } },
+        )
     }
 }
