@@ -15,6 +15,7 @@ object SnailRoute {
     const val DATA_STORAGE = "settings/data_storage"
     const val APPEARANCE = "settings/appearance"
     const val EDIT_PROFILE = "settings/edit_profile"
+    const val TWO_STEP = "security/two_step"
 
     fun chat(conversationId: String) = "chat/$conversationId"
 }
