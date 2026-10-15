@@ -187,8 +187,12 @@ fun ChatScreen(
                     },
                     actions = {
                         IconButton(onClick = {
-                            searchVisible = !searchVisible
-                            if (!searchVisible) searchQuery = ""
+                            if (searchVisible) {
+                                searchVisible = false
+                                searchQuery = ""
+                            } else {
+                                searchVisible = true
+                            }
                         }) {
                             Icon(
                                 imageVector = if (searchVisible) Icons.Default.Close else Icons.Default.Search,
@@ -214,8 +218,12 @@ fun ChatScreen(
                                     text = { Text(if (searchVisible) "Close search" else "Search messages") },
                                     onClick = {
                                         showOverflowMenu = false
-                                        searchVisible = !searchVisible
-                                        if (searchVisible) searchQuery = ""
+                                        if (searchVisible) {
+                                            searchVisible = false
+                                            searchQuery = ""
+                                        } else {
+                                            searchVisible = true
+                                        }
                                     },
                                 )
                             }
