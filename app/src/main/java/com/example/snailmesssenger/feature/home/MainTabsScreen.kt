@@ -1,6 +1,7 @@
 package com.example.snailmesssenger.feature.home
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
@@ -71,7 +72,7 @@ fun MainTabsScreen(
                 1 -> FindPeopleScreen(
                     onBack = { selectTab(0) },
                     onStartConversation = { peerId ->
-                        val conversation = com.example.snailmessenger.data.repository.DemoMessagingRepository.startConversationWith(peerId)
+                        val conversation = com.example.snailmesssenger.data.repository.DemoMessagingRepository.startConversationWith(peerId)
                         onOpenChat(conversation.id)
                     },
                 )
