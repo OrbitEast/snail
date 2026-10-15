@@ -24,18 +24,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Box
+import kotlinx.coroutines.launch
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.DrawerValue
-import kotlinx.coroutines.launch
-import com.example.snailmesssenger.data.preferences.UserPreferences
-import com.example.snailmesssenger.feature.profile.ProfileScreen
-import com.example.snailmesssenger.feature.settings.SettingsScreen
+import com.example.snailmessenger.data.preferences.UserPreferences
+import com.example.snailmessenger.feature.profile.ProfileScreen
+import com.example.snailmessenger.feature.settings.SettingsScreen
 
-/**
- * Main app shell: a compact messenger-first layout with a familiar navigation drawer.
- * Screen content stays native Compose and all destinations remain interactive.
- */
 @Composable
 fun MainTabsScreen(
     preferences: UserPreferences,
@@ -63,7 +58,9 @@ fun MainTabsScreen(
         drawerContent = {
             ModalDrawerSheet {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(top = 28.dp, bottom = 16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 28.dp, bottom = 16.dp),
                 ) {
                     Text(
                         text = "SNAIL Messenger",
@@ -116,41 +113,36 @@ fun MainTabsScreen(
             }
         },
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (selectedTab) {
-                0 -> HomeScreen(
-                    onOpenChat = onOpenChat,
-                    onOpenProfile = { selectTab(3) },
-                    onOpenSettings = { selectTab(2) },
-                    onFindPeople = { selectTab(1) },
-                    onOpenMenu = { scope.launch { drawerState.open() } },
-                    onLogout = onLogout,
-                )
-                1 -> FindPeopleScreen(
-                    onBack = { selectTab(0) },
-                    onStartConversation = { peerId ->
-                        val conversation = com.example.snailmesssenger.data.repository.DemoMessagingRepository
-                            .startConversationWith(peerId)
-                        onOpenChat(conversation.id)
-                    },
-                )
-                2 -> SettingsScreen(
-                    preferences = preferences,
-                    onBack = { selectTab(0) },
-                    onOpenProfile = { selectTab(3) },
-                    onOpenPrivacySecurity = onOpenPrivacySecurity,
-                    onOpenNotifications = onOpenNotifications,
-                    onOpenDataStorage = onOpenDataStorage,
-                    onOpenAppearance = onOpenAppearance,
-                    onOpenEditProfile = onOpenEditProfile,
-                    onLogout = onLogout,
-                )
-                3 -> ProfileScreen(
-                    onBack = { selectTab(0) },
-                    onOpenSettings = { selectTab(2) },
-                    onLogout = onLogout,
-                )
-            }
+        when (selectedTab) {
+            0 -> ChatListScreen(
+                onOpenMenu = { scope.launch { drawerState.open() } },
+                onOpenChat = onOpenChat,
+                onNewChat = onFindPeople,
+            )
+            1 -> FindPeopleScreen(
+                onBack = { selectTab(0) },
+                onStartConversation = { peerId ->
+                    val conversation = com.example.snailmessenger.data.repository.DemoMessagingRepository
+                        .startConversationWith(peerId)
+                    onOpenChat(conversation.id)
+                },
+            )
+            2 -> SettingsScreen(
+                preferences = preferences,
+                onBack = { selectTab(0) },
+                onOpenProfile = { selectTab(3) },
+                onOpenPrivacySecurity = onOpenPrivacySecurity,
+                onOpenNotifications = onOpenNotifications,
+                onOpenDataStorage = onOpenDataStorage,
+                onOpenAppearance = onOpenAppearance,
+                onOpenEditProfile = onOpenEditProfile,
+                onLogout = onLogout,
+            )
+            3 -> ProfileScreen(
+                onBack = { selectTab(0) },
+                onOpenSettings = { selectTab(2) },
+                onLogout = onLogout,
+            )
         }
     }
 }
