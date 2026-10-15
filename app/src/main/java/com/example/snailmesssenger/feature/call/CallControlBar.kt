@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val CallBlue = Color(0xFF2481CC)
 private val CallRed = Color(0xFFE5484D)
 
 @Composable
@@ -74,7 +73,7 @@ private fun CallControl(
             onClick = onClick,
             modifier = Modifier.size(48.dp),
             shape = CircleShape,
-            color = if (active) CallBlue else Color(0xFF343C46),
+            color = if (active) MaterialTheme.colorScheme.primary else Color(0xFF343C46),
             contentColor = Color.White,
         ) {
             androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
