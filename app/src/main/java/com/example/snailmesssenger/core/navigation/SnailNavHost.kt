@@ -212,7 +212,7 @@ fun SnailNavHost(
             PrivacySecurityScreen(onBack = { navController.popBackStack() })
         }
         composable(SnailRoute.NOTIFICATIONS) {
-            NotificationsScreen(onBack = { navController.popBackStack() })
+            NotificationsScreen(preferences = preferences, onBack = { navController.popBackStack() })
         }
         composable(SnailRoute.DATA_STORAGE) {
             DataStorageScreen(onBack = { navController.popBackStack() })
