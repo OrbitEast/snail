@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +41,7 @@ fun TwoStepVerificationScreen(
     onBack: () -> Unit,
     viewModel: SecurityViewModel = viewModel(),
 ) {
-    val state by viewModel.uiState.collectAsStateSecurity()
+    val state by viewModel.uiState.collectAsState()
     var pin by remember { mutableStateOf("") }
     var resetCode by remember { mutableStateOf("") }
     var newPin by remember { mutableStateOf("") }
@@ -129,7 +130,3 @@ fun TwoStepVerificationScreen(
         }
     }
 }
-
-@Composable
-private fun SecurityViewModel.collectAsStateSecurity(): androidx.compose.runtime.State<SecurityUiState> =
-    androidx.compose.runtime.collectAsState(this.uiState)
