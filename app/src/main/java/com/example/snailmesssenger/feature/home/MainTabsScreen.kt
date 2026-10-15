@@ -31,6 +31,7 @@ fun MainTabsScreen(
     onOpenAppearance: () -> Unit,
     onOpenEditProfile: () -> Unit,
     onLogout: () -> Unit,
+    onOpenChatSettings: () -> Unit = onOpenAppearance,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var showCalls by remember { mutableStateOf(false) }
@@ -55,7 +56,7 @@ fun MainTabsScreen(
                 onOpenContacts = { selectTab(1) },
                 onOpenCalls = { showCalls = true; closeDrawer() },
                 onOpenSavedMessages = { onOpenChat("saved"); closeDrawer() },
-                onOpenSettings = { selectTab(2) },
+                onOpenSettings = { onOpenChatSettings(); closeDrawer() },
                 onOpenHelp = { },
             )
         },
