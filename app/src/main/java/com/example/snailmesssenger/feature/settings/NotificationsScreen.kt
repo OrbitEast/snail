@@ -64,6 +64,12 @@ fun NotificationsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
+            Text(
+                text = "Preferences are saved on this device. System notifications are not connected in this local demo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.md),
+            )
             SnailSectionHeading(text = "Chats Notifications")
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
