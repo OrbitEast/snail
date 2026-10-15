@@ -49,7 +49,7 @@ fun CallSessionScreen(
             VoiceCallScreen(
                 state = state,
                 durationText = viewModel.formattedDuration(),
-                onBack = onBack,
+                onBack = { viewModel.endCall(); onBack() },
                 onMute = viewModel::toggleMute,
                 onSpeaker = viewModel::toggleSpeaker,
                 onVideo = viewModel::toggleCamera,
