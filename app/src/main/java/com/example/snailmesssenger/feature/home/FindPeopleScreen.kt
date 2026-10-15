@@ -95,7 +95,7 @@ fun FindPeopleScreen(
                 if (filteredContacts.isEmpty()) {
                     item {
                         Text(
-                            text = "No contacts match that search."
+                            text = "No contacts match that search.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(Spacing.xl),
