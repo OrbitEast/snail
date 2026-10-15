@@ -15,7 +15,7 @@ class ThemeViewModel(app:Application):AndroidViewModel(app){
   wallpaperHex=prefs.getString("wallpaper","#E7EBF0")?: "#E7EBF0",doodlePattern=prefs.getBoolean("doodles",true),
   wallpaperBlur=prefs.getBoolean("blur",false),wallpaperMotion=prefs.getBoolean("motion",false),wallpaperUri=prefs.getString("uri",null))
  private fun update(f:(ThemeState)->ThemeState){val s=f(_state.value);_state.value=s;prefs.edit().putString("palette",s.palette.name).putString("night",s.nightMode.name).putString("accent",s.customAccentHex).putFloat("textSize",s.messageTextSp).putFloat("radius",s.bubbleRadiusDp).putString("wallpaper",s.wallpaperHex).putBoolean("doodles",s.doodlePattern).putBoolean("blur",s.wallpaperBlur).putBoolean("motion",s.wallpaperMotion).putString("uri",s.wallpaperUri).apply()}
- private fun hex(v:String)=if(v.trim().removePrefix("#").matches(Regex("(?i)[0-9a-f]{6}"))) "#"+v.trim().removePrefix("#").uppercase() else "#2481CC"
+ private fun hex(v:String):String { val raw=v.trim().removePrefix("#"); return if(raw.length<=6 && raw.matches(Regex("(?i)[0-9a-f]*"))) "#"+raw.uppercase() else "#2481CC" }
  fun setPalette(v:SnailPalette)=update{it.copy(palette=v)}
  fun setNightMode(v:NightMode)=update{it.copy(nightMode=v)}
  fun setCustomAccent(v:String)=update{it.copy(customAccentHex=hex(v))}
