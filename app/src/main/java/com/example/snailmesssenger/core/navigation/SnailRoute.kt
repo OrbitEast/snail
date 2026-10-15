@@ -7,6 +7,7 @@ object SnailRoute {
     const val REGISTER = "register"
     const val HOME = "home"
     const val CHAT = "chat/{conversationId}"
+    const val CALL = "call/{conversationId}/{kind}"
     const val PROFILE = "profile"
     const val SETTINGS = "settings"
     const val FIND_PEOPLE = "find_people"
@@ -18,4 +19,5 @@ object SnailRoute {
     const val TWO_STEP = "security/two_step"
 
     fun chat(conversationId: String) = "chat/$conversationId"
+    fun call(conversationId: String, kind: String) = "call/$conversationId/$kind"
 }
