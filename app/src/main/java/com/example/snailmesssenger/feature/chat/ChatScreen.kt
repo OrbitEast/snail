@@ -55,6 +55,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,9 +84,8 @@ fun ChatScreen(
     conversationId: String,
     onBack: () -> Unit,
 ) {
-    val conversation = remember(conversationId) {
-        DemoMessagingRepository.getConversation(conversationId)
-    }
+    val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
+    val conversation = conversations.firstOrNull { it.id == conversationId }
     if (conversation == null) {
         Scaffold(
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
@@ -111,7 +111,7 @@ fun ChatScreen(
     }
 
     var inputText by remember { mutableStateOf("") }
-    var messages by remember { mutableStateOf(conversation.messages) }
+    var messages by remember(conversationId) { mutableStateOf(conversation.messages) }
     var showProfileSheet by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
@@ -122,6 +122,13 @@ fun ChatScreen(
     var searchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    LaunchedEffect(conversation.messages) {
+        messages = conversation.messages
+    }
+    LaunchedEffect(conversationId) {
+        DemoMessagingRepository.markConversationRead(conversationId)
+    }
+
     val filteredMessages = remember(messages, searchQuery) {
         if (searchQuery.isBlank()) messages
         else messages.filter { it.text.contains(searchQuery.trim(), ignoreCase = true) }
