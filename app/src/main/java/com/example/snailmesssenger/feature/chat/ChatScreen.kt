@@ -37,6 +37,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.MoreVert
@@ -73,6 +76,9 @@ import com.example.snailmesssenger.core.designsystem.Spacing
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.snailmesssenger.feature.media.AttachmentViewModel
+import com.example.snailmesssenger.feature.media.SnailAttachmentBottomSheet
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -83,7 +89,11 @@ import java.util.Locale
 fun ChatScreen(
     conversationId: String,
     onBack: () -> Unit,
+    onVoiceCall: () -> Unit = {},
+    onVideoCall: () -> Unit = {},
 ) {
+    val attachmentViewModel: AttachmentViewModel = viewModel(key = "attachments-$conversationId")
+    val attachmentState by attachmentViewModel.uiState.collectAsState()
     val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
     val conversation = conversations.firstOrNull { it.id == conversationId }
     if (conversation == null) {
@@ -196,6 +206,12 @@ fun ChatScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = onVoiceCall) {
+                            Icon(Icons.Default.Call, contentDescription = "Start voice call")
+                        }
+                        IconButton(onClick = onVideoCall) {
+                            Icon(Icons.Default.Videocam, contentDescription = "Start video call")
+                        }
                         IconButton(onClick = {
                             if (searchVisible) {
                                 searchVisible = false
@@ -366,6 +382,12 @@ fun ChatScreen(
                         verticalAlignment = Alignment.Bottom,
                     ) {
                         IconButton(
+                            onClick = { attachmentViewModel.showSheet() },
+                            modifier = Modifier.size(38.dp),
+                        ) {
+                            Icon(Icons.Default.AttachFile, contentDescription = "Attach media", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(
                             onClick = { showEmojiPicker = !showEmojiPicker },
                             modifier = Modifier.size(42.dp),
                         ) {
@@ -480,6 +502,30 @@ fun ChatScreen(
         }
     }
 
+    if (attachmentState.isSheetVisible) {
+        SnailAttachmentBottomSheet(
+            state = attachmentState,
+            onDismiss = attachmentViewModel::hideSheet,
+            onShortcut = attachmentViewModel::setShortcut,
+            onToggleMedia = attachmentViewModel::toggleSelection,
+            onPreview = attachmentViewModel::openPreview,
+        )
+    }
+    if (attachmentState.isPreviewVisible) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = attachmentViewModel::closePreview,
+            title = { Text("Media preview") },
+            text = { Text("Selected media is ready for the local demo. Network upload is not configured.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    attachmentViewModel.sendSelected { _, _, _, _ -> }
+                }) { Text("Done") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = attachmentViewModel::closePreview) { Text("Back") }
+            },
+        )
+    }
     if (showProfileSheet) {
         PeerProfileSheet(
             peer = conversation.peer,
