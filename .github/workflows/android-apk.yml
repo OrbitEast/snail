@@ -32,6 +32,17 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Read app version
+        id: app-version
+        shell: bash
+        run: |
+          VERSION_NAME=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          if [ -z "$VERSION_NAME" ]; then
+            echo "Could not read versionName from app/build.gradle.kts"
+            exit 1
+          fi
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Build APK
         run: |
           chmod +x ./gradlew
@@ -40,7 +51,7 @@ jobs:
       - name: Upload installable testing APK
         uses: actions/upload-artifact@v4
         with:
-          name: SNAIL-v1.6-debug-apk
+          name: SNAIL-v${{ steps.app-version.outputs.name }}-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
