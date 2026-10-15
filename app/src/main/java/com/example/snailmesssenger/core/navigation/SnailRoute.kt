@@ -17,6 +17,8 @@ object SnailRoute {
     const val APPEARANCE = "settings/appearance"
     const val EDIT_PROFILE = "settings/edit_profile"
     const val TWO_STEP = "security/two_step"
+    const val CHAT_SETTINGS = "settings/chat_customization"
+    const val WALLPAPER_PICKER = "settings/chat_wallpaper"
 
     fun chat(conversationId: String) = "chat/$conversationId"
     fun call(conversationId: String, kind: String) = "call/$conversationId/$kind"
