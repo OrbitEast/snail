@@ -56,7 +56,7 @@ fun MainTabsScreen(
                 onOpenContacts = { selectTab(1) },
                 onOpenCalls = { showCalls = true; closeDrawer() },
                 onOpenSavedMessages = { onOpenChat("saved"); closeDrawer() },
-                onOpenSettings = { onOpenChatSettings(); closeDrawer() },
+                onOpenSettings = onOpenChatSettings,
                 onOpenHelp = { },
             )
         },
