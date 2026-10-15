@@ -1,5 +1,6 @@
 package com.example.snailmesssenger.feature.home
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 /** UI model for a single conversation in the main inbox. */
+@Immutable
 data class ChatUiState(
     val id: String,
     val title: String,
@@ -21,6 +23,7 @@ data class ChatUiState(
     val isOutgoing: Boolean = false,
 )
 
+@Immutable
 data class ChatListUiState(
     val searchQuery: String = "",
     val chats: List<ChatUiState> = emptyList(),
