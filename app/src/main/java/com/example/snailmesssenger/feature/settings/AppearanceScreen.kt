@@ -35,11 +35,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.snailmesssenger.feature.theme.NightMode
+import com.example.snailmesssenger.feature.theme.ThemeViewModel
 import androidx.compose.ui.Modifier
 import com.example.snailmesssenger.core.designsystem.SnailSectionHeading
 import com.example.snailmesssenger.core.designsystem.SnailSectionRow
 import com.example.snailmesssenger.core.designsystem.Spacing
-import com.example.snailmesssenger.core.designsystem.ThemePreference
 import com.example.snailmesssenger.data.preferences.UserPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +51,8 @@ fun AppearanceScreen(
     onBack: () -> Unit,
     onOpenChatSettings: () -> Unit = {},
 ) {
-    val theme by preferences.theme.collectAsState()
+    val themeViewModel: ThemeViewModel = viewModel()
+    val themeState by themeViewModel.state.collectAsState()
     val animationsEnabled by preferences.animationsEnabled.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
 
@@ -76,7 +79,7 @@ fun AppearanceScreen(
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "App Theme",
-                subtitle = theme.name.lowercase().replaceFirstChar { it.uppercase() },
+                subtitle = themeState.nightMode.label,
                 icon = Icons.Default.DarkMode,
                 onClick = { showThemeDialog = true },
             )
@@ -114,7 +117,7 @@ fun AppearanceScreen(
             title = { Text("Choose Theme") },
             text = {
                 Column {
-                    ThemePreference.entries.forEach { option ->
+                    NightMode.entries.forEach { option ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -122,15 +125,15 @@ fun AppearanceScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             RadioButton(
-                                selected = theme == option,
+                                selected = themeState.nightMode == option,
                                 onClick = {
-                                    preferences.setTheme(option)
+                                    themeViewModel.setNightMode(option)
                                     showThemeDialog = false
                                 },
                             )
                             Spacer(Modifier.width(Spacing.sm))
                             Text(
-                                text = option.name.lowercase().replaceFirstChar { it.uppercase() },
+                                text = option.label,
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                         }
