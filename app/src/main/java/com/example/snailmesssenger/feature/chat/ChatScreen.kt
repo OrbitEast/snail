@@ -71,6 +71,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.snailmesssenger.core.designsystem.SnailAvatar
 import com.example.snailmesssenger.core.designsystem.Spacing
 import com.example.snailmesssenger.data.model.Conversation
@@ -81,6 +83,7 @@ import com.example.snailmesssenger.feature.media.AttachmentViewModel
 import com.example.snailmesssenger.feature.media.SnailAttachmentBottomSheet
 import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
 import com.example.snailmesssenger.feature.theme.LocalChatTextSize
+import com.example.snailmesssenger.feature.theme.LocalSnailThemeState
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -96,6 +99,7 @@ fun ChatScreen(
 ) {
     val attachmentViewModel: AttachmentViewModel = viewModel(key = "attachments-$conversationId")
     val attachmentState by attachmentViewModel.uiState.collectAsState()
+    val themeState = LocalSnailThemeState.current
     val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
     val conversation = conversations.firstOrNull { it.id == conversationId }
     if (conversation == null) {
@@ -163,7 +167,7 @@ fun ChatScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding(),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = parseChatColor(themeState.wallpaperHex),
         topBar = {
             Column {
                 TopAppBar(
@@ -453,10 +457,27 @@ fun ChatScreen(
             }
         },
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier.fillMaxSize().padding(padding)
-                .background(MaterialTheme.colorScheme.background),
+                .background(parseChatColor(themeState.wallpaperHex)),
         ) {
+            themeState.wallpaperUri?.let { wallpaperUri ->
+                AsyncImage(
+                    model = wallpaperUri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            if (themeState.doodlePattern) {
+                Text(
+                    text = "◌  ✳  ⌁  ◇  ☼  ♧  ◌",
+                    modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+            }
+            Column(modifier = Modifier.fillMaxSize()) {
             if (searchVisible && searchQuery.isNotBlank()) {
                 Text(
                     text = "${filteredMessages.size} matching message${if (filteredMessages.size == 1) "" else "s"}",
@@ -500,6 +521,7 @@ fun ChatScreen(
                         MessageBubble(message = message)
                     }
                 }
+            }
             }
         }
     }
@@ -599,3 +621,6 @@ private fun MessageBubble(message: Message) {
 private fun formatTime(ms: Long): String =
     SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
 
+
+private fun parseChatColor(hex: String): Color =
+    runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color(0xFFE7EBF0))
