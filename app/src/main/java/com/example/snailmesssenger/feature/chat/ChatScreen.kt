@@ -116,6 +116,9 @@ fun ChatScreen(
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var emojiCategory by remember { mutableStateOf("Smileys") }
+    var recentEmojis by remember {
+        mutableStateOf(listOf("😀", "😂", "🥹", "😍", "👍", "❤️", "🔥", "🙏", "🎉", "🤝", "👀", "💯"))
+    }
     var searchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -283,7 +286,7 @@ fun ChatScreen(
             ) {
                 if (showEmojiPicker) {
                     val emojiCategories = listOf(
-                        "Recent" to listOf("😀", "😂", "🥹", "😍", "👍", "❤️", "🔥", "🙏", "🎉", "🤝", "👀", "💯"),
+                        "Recent" to recentEmojis,
                         "Smileys" to listOf("😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "🥹", "😊", "😇", "🙂", "🙃", "😉", "😍", "🥰", "😘", "😋", "🤔", "🫡", "😎", "🥳", "😭", "😤", "😴", "🤯", "🥺", "😬", "🤗", "🫶", "🤩", "😌"),
                         "People" to listOf("👋", "🤚", "✋", "🖐️", "👌", "🤌", "✌️", "🤞", "🫰", "🤟", "🤘", "🤙", "👈", "👉", "👇", "☝️", "👍", "👎", "👏", "🙌", "🫶", "🙏", "💪", "🫂", "🤝", "💅", "👀", "🧠", "👶", "🧑", "👨", "👩"),
                         "Animals" to listOf("🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🙈", "🐔", "🐧", "🐦", "🦄", "🐝", "🦋", "🐢", "🐬", "🐳", "🦖", "🐙", "🦉", "🦩", "🐾"),
