@@ -42,13 +42,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.snailmesssenger.core.designsystem.ThemePreference
+import com.example.snailmesssenger.feature.theme.NightMode
+import com.example.snailmesssenger.feature.theme.ThemeViewModel
 import com.example.snailmesssenger.data.preferences.UserPreferences
 
 private val DrawerBlue = Color(0xFF2481CC)
@@ -70,10 +72,12 @@ fun SnailDrawerSheet(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val dark = preferences.theme.value == ThemePreference.DARK
-    val surface = if (dark) DrawerDark else Color.White
-    val primaryText = if (dark) Color.White else Color(0xFF222222)
-    val secondaryText = if (dark) Color(0xFFB7C1CA) else Color(0xFF71808D)
+    val themeViewModel: ThemeViewModel = viewModel()
+    val themeState by themeViewModel.state.collectAsState()
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val surface = MaterialTheme.colorScheme.surface
+    val primaryText = MaterialTheme.colorScheme.onSurface
+    val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
 
     ModalDrawerSheet(
         modifier = Modifier.fillMaxHeight(),
@@ -86,7 +90,7 @@ fun SnailDrawerSheet(
                     dark = dark,
                     onToggleAccountSwitcher = viewModel::toggleAccountSwitcher,
                     onToggleTheme = {
-                        preferences.setTheme(if (dark) ThemePreference.LIGHT else ThemePreference.DARK)
+                        themeViewModel.setNightMode(if (dark) NightMode.LIGHT else NightMode.DARK)
                     },
                     onSelectAccount = viewModel::selectAccount,
                     onAddAccount = { onOpenProfile(); onClose() },
