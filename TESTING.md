@@ -6,7 +6,7 @@ Current testing version: **1.6** (versionCode 7).
 
 1. Open the [Android APK build workflow](https://github.com/OrbitEast/snail/actions/workflows/android-apk.yml).
 2. Select the newest completed run on the `main` branch.
-3. In **Artifacts**, download `SNAIL-v1.6-debug-apk`.
+3. In **Artifacts**, download the artifact named `SNAIL-v<version>-debug-apk` (for example, `SNAIL-v1.6-debug-apk`). The artifact name updates automatically when the app version changes.
 4. Extract the ZIP and install `app-debug.apk` on your Android device.
 
 ## Build behavior
