@@ -336,6 +336,7 @@ fun ChatScreen(
                                         .clip(RoundedCornerShape(10.dp))
                                         .clickable {
                                             inputText += emoji
+                                            recentEmojis = (listOf(emoji) + recentEmojis.filterNot { it == emoji }).take(24)
                                             showEmojiPicker = false
                                         },
                                     contentAlignment = Alignment.Center,
