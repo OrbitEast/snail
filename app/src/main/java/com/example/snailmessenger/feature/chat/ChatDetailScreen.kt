@@ -56,6 +56,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.snailmesssenger.feature.media.AttachmentViewModel
+import com.example.snailmesssenger.feature.media.MediaPreviewScreen
+import com.example.snailmesssenger.feature.media.SnailAttachmentBottomSheet
 
 @Composable
 fun ChatDetailScreen(
@@ -64,6 +67,8 @@ fun ChatDetailScreen(
     viewModel: ChatDetailViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val attachmentViewModel: AttachmentViewModel = viewModel()
+    val attachmentState by attachmentViewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
     LaunchedEffect(conversationId) {
@@ -75,6 +80,7 @@ fun ChatDetailScreen(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.fillMaxSize().imePadding(),
         containerColor = Color(0xFFE7EBF0),
@@ -128,6 +134,7 @@ fun ChatDetailScreen(
                 draft = state.draft,
                 onDraftChanged = viewModel::updateDraft,
                 onSend = { viewModel.sendMessage() },
+                onAttach = attachmentViewModel::showSheet,
             )
         },
     ) { padding ->
@@ -145,6 +152,28 @@ fun ChatDetailScreen(
                 }
             }
         }
+    }
+    SnailAttachmentBottomSheet(
+        state = attachmentState,
+        onDismiss = attachmentViewModel::hideSheet,
+        onShortcut = attachmentViewModel::setShortcut,
+        onToggleMedia = attachmentViewModel::toggleSelection,
+        onPreview = attachmentViewModel::openPreview,
+    )
+    MediaPreviewScreen(
+        state = attachmentState,
+        onBack = attachmentViewModel::closePreview,
+        onCaptionChange = attachmentViewModel::updateCaption,
+        onQualityChange = attachmentViewModel::setHighQuality,
+        onTimerToggle = {
+            attachmentViewModel.setSelfDestruct(if (attachmentState.selection.selfDestructSeconds == null) 5 else null)
+        },
+        onSend = {
+            attachmentViewModel.sendSelected { media, caption, _, _ ->
+                viewModel.sendMessage(caption.ifBlank { "📎 ${media.size} media item(s)" })
+            }
+        },
+    )
     }
 }
 
@@ -166,6 +195,7 @@ private fun MessageInputBar(
     draft: String,
     onDraftChanged: (String) -> Unit,
     onSend: () -> Unit,
+    onAttach: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
@@ -176,7 +206,7 @@ private fun MessageInputBar(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
-            IconButton(onClick = {}, modifier = Modifier.size(42.dp)) {
+            IconButton(onClick = onAttach, modifier = Modifier.size(42.dp)) {
                 Icon(Icons.Default.AttachFile, contentDescription = "Attach")
             }
             IconButton(onClick = {}, modifier = Modifier.size(42.dp)) {
