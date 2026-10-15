@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,7 +52,7 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
     var unsupportedFeature by remember { mutableStateOf<String?>(null) }
     var showPinDialog by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
-    val securityState by securityViewModel.uiState.collectAsSecurityState()
+    val securityState by securityViewModel.uiState.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize().statusBarsPadding(),
@@ -60,16 +61,16 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             SnailSectionHeading("Privacy")
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow("Last Seen & Online", "$lastSeenOption · local preview", Icons.Default.Visibility) { lastSeenOption = if (lastSeenOption == "My Contacts") "Nobody" else "My Contacts" }
+            SnailSectionRow(title = "Last Seen & Online", subtitle = "$lastSeenOption · local preview", icon = Icons.Default.Visibility, onClick = { lastSeenOption = if (lastSeenOption == "My Contacts") "Nobody" else "My Contacts" })
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow("Profile Photo", "$photoOption · local preview", Icons.Default.Security) { photoOption = if (photoOption == "Everybody") "My Contacts" else "Everybody" }
+            SnailSectionRow(title = "Profile Photo", subtitle = "$photoOption · local preview", icon = Icons.Default.Security, onClick = { photoOption = if (photoOption == "Everybody") "My Contacts" else "Everybody" })
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow("Blocked Users", "0 blocked", Icons.Default.Block) { unsupportedFeature = "Blocked Users" }
+            SnailSectionRow(title = "Blocked Users", subtitle = "0 blocked", icon = Icons.Default.Block, onClick = { unsupportedFeature = "Blocked Users" })
 
             Spacer(Modifier.height(Spacing.xl))
             SnailSectionHeading("Security")
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow("Passcode Lock", if (passcodeEnabled) "Enabled" else "Disabled", Icons.Default.Lock) { passcodeEnabled = !passcodeEnabled }
+            SnailSectionRow(title = "Passcode Lock", subtitle = if (passcodeEnabled) "Enabled" else "Disabled", icon = Icons.Default.Lock, onClick = { passcodeEnabled = !passcodeEnabled })
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
 
             androidx.compose.foundation.layout.Row(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp)) {
@@ -82,7 +83,7 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
                 })
             }
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow("Active Sessions", "Mobile · Desktop · Web", Icons.Default.Devices) { unsupportedFeature = "Active Sessions" }
+            SnailSectionRow(title = "Active Sessions", subtitle = "Mobile · Desktop · Web", icon = Icons.Default.Devices, onClick = { unsupportedFeature = "Active Sessions" })
             Spacer(Modifier.height(Spacing.xxxl))
         }
     }
@@ -111,7 +112,3 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
         AlertDialog(onDismissRequest = { unsupportedFeature = null }, title = { Text("$feature unavailable") }, text = { Text("This control needs a real account service. It remains local-only in the prototype.") }, confirmButton = { TextButton(onClick = { unsupportedFeature = null }) { Text("OK") } })
     }
 }
-
-@Composable
-private fun SecurityViewModel.collectAsSecurityState(): androidx.compose.runtime.State<com.example.snailmesssenger.feature.security.SecurityUiState> =
-    androidx.compose.runtime.collectAsState(this.uiState)
