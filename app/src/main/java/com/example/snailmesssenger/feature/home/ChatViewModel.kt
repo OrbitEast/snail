@@ -1,11 +1,12 @@
 package com.example.snailmesssenger.feature.home
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 /** UI model for a single conversation in the main inbox. */
 data class ChatUiState(
@@ -36,17 +37,17 @@ class ChatViewModel : ViewModel() {
         val normalized = query.trim()
         ChatListUiState(
             searchQuery = query,
-            chats = if (normalized.isBlank()) {
-                chats
-            } else {
-                chats.filter {
-                    it.title.contains(normalized, ignoreCase = true) ||
-                        it.username.contains(normalized, ignoreCase = true) ||
-                        it.lastMessage.contains(normalized, ignoreCase = true)
-                }
+            chats = if (normalized.isBlank()) chats else chats.filter {
+                it.title.contains(normalized, ignoreCase = true) ||
+                    it.username.contains(normalized, ignoreCase = true) ||
+                    it.lastMessage.contains(normalized, ignoreCase = true)
             },
         )
-    }.stateInViewModel()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = ChatListUiState(chats = allChats.value),
+    )
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
@@ -55,13 +56,6 @@ class ChatViewModel : ViewModel() {
     fun clearSearch() {
         _searchQuery.value = ""
     }
-
-    private fun <T> kotlinx.coroutines.flow.Flow<T>.stateInViewModel(): StateFlow<T> =
-        kotlinx.coroutines.flow.stateIn(
-            scope = viewModelScope,
-            started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
-            initialValue = ChatListUiState() as T,
-        ) as StateFlow<T>
 
     private fun mockChats(): List<ChatUiState> = listOf(
         ChatUiState("maya", "Maya Kapoor", "@mayakapoor", "Are we still meeting at 7?", "20:14", 2, true, "Maya", false),
