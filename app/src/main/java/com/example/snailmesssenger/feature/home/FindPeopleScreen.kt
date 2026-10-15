@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -48,7 +49,8 @@ fun FindPeopleScreen(
     onBack: () -> Unit,
     onStartConversation: (String) -> Unit,
 ) {
-    val contacts = remember { DemoMessagingRepository.getConversations().map { it.peer } }
+    val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
+    val contacts = remember(conversations) { conversations.map { it.peer }.distinctBy { it.id } }
     var searchQuery by remember { mutableStateOf("") }
     val filteredContacts = contacts.filter { contact ->
         searchQuery.isBlank() ||
@@ -75,8 +77,8 @@ fun FindPeopleScreen(
                 .padding(padding),
         ) {
             Text(
-                text = "Demo contacts — not a real user directory.",
-                style = MaterialTheme.typography.labelMedium,
+                text = "Find someone to start a chat",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.sm),
             )
@@ -85,7 +87,7 @@ fun FindPeopleScreen(
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.sm),
                 singleLine = true,
-                label = { Text("Search by name or username") },
+                label = { Text("Search contacts") },
                 placeholder = { Text("@username") },
             )
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
@@ -93,7 +95,7 @@ fun FindPeopleScreen(
                 if (filteredContacts.isEmpty()) {
                     item {
                         Text(
-                            text = "No demo contacts match that search.",
+                            text = "No contacts match that search."
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(Spacing.xl),
