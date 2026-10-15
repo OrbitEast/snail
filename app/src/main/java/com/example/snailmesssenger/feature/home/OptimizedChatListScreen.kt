@@ -90,7 +90,10 @@ fun OptimizedChatListScreen(
             }
         },
     ) { padding ->
-        val showContactResults = searchActive && state.query.isNotBlank()
+        val showContactResults = searchActive
+        val visibleChats = if (state.query.isBlank()) state.chats else state.matchingChats
+        val visibleSnailContacts = if (state.query.isBlank()) state.allSnailContacts else state.matchingSnailContacts
+        val visibleInviteContacts = if (state.query.isBlank()) state.allInviteContacts else state.matchingInviteContacts
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -115,33 +118,41 @@ fun OptimizedChatListScreen(
                     }
                 }
             } else {
-                if (state.matchingChats.isNotEmpty()) {
+                if (visibleChats.isNotEmpty()) {
                     item(key = "header-matching-chats") {
                         SectionHeader("CHATS", showFloatingHeader)
                     }
-                    items(state.matchingChats, key = { "search-chat-${it.id}" }) { chat ->
+                    items(visibleChats, key = { "search-chat-${it.id}" }) { chat ->
                         ChatSearchResultRow(chat = chat, query = state.query, onClick = { onOpenChat(chat.id) })
                     }
                 }
-                if (state.matchingSnailContacts.isNotEmpty()) {
+                if (visibleSnailContacts.isNotEmpty()) {
                     item(key = "header-snail-contacts") { SectionHeader("CONTACTS ON SNAIL", showFloatingHeader) }
-                    items(state.matchingSnailContacts, key = { "snail-contact-${it.id}" }) { contact ->
-                        ContactRowItem(
-                            contact = contact,
-                            query = state.query,
-                            onOpen = { onOpenChat(it.id) },
-                        )
-                        Divider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                    }
+                    visibleSnailContacts.groupBy { it.displayName.firstOrNull()?.uppercaseChar() ?: '#' }
+                        .toSortedMap().forEach { (letter, contactsForLetter) ->
+                            item(key = "snail-letter-$letter") { LetterHeader(letter.toString()) }
+                            items(contactsForLetter, key = { "snail-contact-${it.id}" }) { contact ->
+                                ContactRowItem(
+                                    contact = contact,
+                                    query = state.query,
+                                    onOpen = { onOpenChat(it.id) },
+                                )
+                                Divider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                            }
+                        }
                 }
-                if (state.matchingInviteContacts.isNotEmpty()) {
+                if (visibleInviteContacts.isNotEmpty()) {
                     item(key = "header-invite-contacts") { SectionHeader("INVITE TO SNAIL", showFloatingHeader) }
-                    items(state.matchingInviteContacts, key = { "invite-contact-${it.id}" }) { contact ->
-                        ContactRowItem(contact = contact, query = state.query)
-                        Divider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                    }
+                    visibleInviteContacts.groupBy { it.displayName.firstOrNull()?.uppercaseChar() ?: '#' }
+                        .toSortedMap().forEach { (letter, contactsForLetter) ->
+                            item(key = "invite-letter-$letter") { LetterHeader(letter.toString()) }
+                            items(contactsForLetter, key = { "invite-contact-${it.id}" }) { contact ->
+                                ContactRowItem(contact = contact, query = state.query)
+                                Divider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                            }
+                        }
                 }
-                if (state.matchingChats.isEmpty() && state.matchingSnailContacts.isEmpty() && state.matchingInviteContacts.isEmpty()) {
+                if (visibleChats.isEmpty() && visibleSnailContacts.isEmpty() && visibleInviteContacts.isEmpty() && state.query.isNotBlank()) {
                     item(key = "empty-search") {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -156,6 +167,19 @@ fun OptimizedChatListScreen(
             }
         }
     }
+}
+
+@Composable
+private fun LetterHeader(letter: String) {
+    Text(
+        text = letter,
+        modifier = Modifier.fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
+            .padding(horizontal = 16.dp, vertical = 7.dp),
+        color = SearchMatchBlue,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable
