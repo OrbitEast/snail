@@ -1,6 +1,7 @@
 package com.example.snailmesssenger.feature.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -32,7 +32,10 @@ fun ContactRowItem(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (contact.isRegistered) Modifier.clickable { onOpen(contact) } else Modifier)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(modifier = Modifier.size(50.dp)) {
@@ -58,9 +61,7 @@ fun ContactRowItem(
             }
         }
         Spacer(Modifier.width(12.dp))
-        Column(
-            modifier = Modifier.weight(1f),
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             HighlightedSearchText(
                 text = contact.displayName,
                 query = query,
@@ -81,7 +82,6 @@ fun ContactRowItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 8.dp),
             )
-            androidx.compose.foundation.clickable
         } else {
             Button(
                 onClick = { onInvite(contact) },
