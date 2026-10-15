@@ -53,7 +53,6 @@ import com.example.snailmesssenger.feature.theme.NightMode
 import com.example.snailmesssenger.feature.theme.ThemeViewModel
 import com.example.snailmesssenger.data.preferences.UserPreferences
 
-private val DrawerBlue = Color(0xFF2481CC)
 private val DrawerDark = Color(0xFF1C2733)
 private val DrawerLightBlue = Color(0xFFB3D7FF)
 
@@ -171,7 +170,7 @@ private fun DrawerHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (dark) DrawerDark else DrawerBlue)
+            .background(if (dark) DrawerDark else MaterialTheme.colorScheme.primary)
             .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
         Row(
