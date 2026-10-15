@@ -1,6 +1,9 @@
 package com.example.snailmesssenger.feature.home
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
@@ -9,21 +12,30 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.DrawerValue
+import kotlinx.coroutines.launch
 import com.example.snailmesssenger.data.preferences.UserPreferences
 import com.example.snailmesssenger.feature.profile.ProfileScreen
 import com.example.snailmesssenger.feature.settings.SettingsScreen
 
+/**
+ * Main app shell: a compact messenger-first layout with a familiar navigation drawer.
+ * Screen content stays native Compose and all destinations remain interactive.
+ */
 @Composable
 fun MainTabsScreen(
     preferences: UserPreferences,
@@ -37,76 +49,85 @@ fun MainTabsScreen(
     onLogout: () -> Unit,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.ChatBubble, contentDescription = "Chats") },
-                    label = { Text("Chats") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.People, contentDescription = "Contacts") },
-                    label = { Text("Contacts") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                    label = { Text("Profile") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                )
+    fun selectTab(index: Int) {
+        selectedTab = index
+        scope.launch { drawerState.close() }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = selectedTab == 0,
+        drawerContent = {
+            ModalDrawerSheet {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(top = 28.dp, bottom = 16.dp),
+                ) {
+                    Text(
+                        text = "SNAIL Messenger",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 18.dp),
+                    )
+                    Text(
+                        text = "YOUR SPACE",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Chats") },
+                        selected = selectedTab == 0,
+                        onClick = { selectTab(0) },
+                        icon = { Icon(Icons.Default.ChatBubble, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Contacts") },
+                        selected = selectedTab == 1,
+                        onClick = { selectTab(1) },
+                        icon = { Icon(Icons.Default.People, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "ACCOUNT",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Settings") },
+                        selected = selectedTab == 2,
+                        onClick = { selectTab(2) },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Profile") },
+                        selected = selectedTab == 3,
+                        onClick = { selectTab(3) },
+                        icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                }
             }
         },
-    ) { innerPadding ->
-        androidx.compose.foundation.layout.Box(modifier = Modifier.padding(innerPadding)) {
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             when (selectedTab) {
                 0 -> HomeScreen(
                     onOpenChat = onOpenChat,
-                    onOpenProfile = { selectedTab = 3 },
-                    onOpenSettings = { selectedTab = 2 },
-                    onFindPeople = { selectedTab = 1 },
+                    onOpenProfile = { selectTab(3) },
+                    onOpenSettings = { selectTab(2) },
+                    onFindPeople = { selectTab(1) },
+                    onOpenMenu = { scope.launch { drawerState.open() } },
                     onLogout = onLogout,
                 )
                 1 -> FindPeopleScreen(
-                    onBack = { selectedTab = 0 },
+                    onBack = { selectTab(0) },
                     onStartConversation = { peerId ->
                         val conversation = com.example.snailmesssenger.data.repository.DemoMessagingRepository
                             .startConversationWith(peerId)
@@ -115,8 +136,8 @@ fun MainTabsScreen(
                 )
                 2 -> SettingsScreen(
                     preferences = preferences,
-                    onBack = { selectedTab = 0 },
-                    onOpenProfile = { selectedTab = 3 },
+                    onBack = { selectTab(0) },
+                    onOpenProfile = { selectTab(3) },
                     onOpenPrivacySecurity = onOpenPrivacySecurity,
                     onOpenNotifications = onOpenNotifications,
                     onOpenDataStorage = onOpenDataStorage,
@@ -125,8 +146,8 @@ fun MainTabsScreen(
                     onLogout = onLogout,
                 )
                 3 -> ProfileScreen(
-                    onBack = { selectedTab = 0 },
-                    onOpenSettings = { selectedTab = 2 },
+                    onBack = { selectTab(0) },
+                    onOpenSettings = { selectTab(2) },
                     onLogout = onLogout,
                 )
             }
