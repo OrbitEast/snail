@@ -199,7 +199,7 @@ private fun DrawerHeader(
                         .size(16.dp)
                         .background(Color(0xFF45C76F), CircleShape)
                         .padding(3.dp)
-                        .background(if (dark) DrawerDark else DrawerBlue, CircleShape),
+                        .background(if (dark) DrawerDark else MaterialTheme.colorScheme.surface, CircleShape),
                 )
             }
             Spacer(Modifier.size(12.dp))
