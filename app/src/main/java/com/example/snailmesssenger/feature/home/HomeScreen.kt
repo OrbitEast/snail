@@ -26,7 +26,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -74,7 +74,6 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
     val conversations = remember { DemoMessagingRepository.getConversations() }
-    val onlinePeople = remember(conversations) { conversations.filter { it.peer.isOnline } }
     val unreadTotal = conversations.sumOf { it.unreadCount }
     val filtered = remember(searchQuery, selectedFilter, conversations) {
         conversations.filter { conversation ->
@@ -264,62 +263,6 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = 20.dp, top = 2.dp),
             ) {
-                if (searchQuery.isBlank() && selectedFilter == "All" && onlinePeople.isNotEmpty()) {
-                    item(key = "active_header") {
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .padding(start = 22.dp, end = 22.dp, top = 8.dp, bottom = 13.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(7.dp),
-                        ) {
-                            Text(
-                                text = "ACTIVE NOW",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Box(
-                                modifier = Modifier.size(6.dp).clip(CircleShape)
-                                    .background(com.example.snailmesssenger.core.designsystem.SuccessGreen),
-                            )
-                        }
-                    }
-                    item(key = "active_people") {
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(start = 18.dp, end = 18.dp, bottom = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(17.dp),
-                        ) {
-                            onlinePeople.forEach { conversation ->
-                                Column(
-                                    modifier = Modifier.width(58.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable { onOpenChat(conversation.id) }
-                                        .padding(vertical = 2.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    SnailAvatar(
-                                        displayId = conversation.peer.id,
-                                        displayName = conversation.peer.displayName,
-                                        size = 52,
-                                        showOnlineIndicator = true,
-                                        isOnline = true,
-                                    )
-                                    Spacer(Modifier.height(7.dp))
-                                    Text(
-                                        text = conversation.peer.displayName.substringBefore(" "),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
                 item(key = "list_header") {
                     Row(
                         modifier = Modifier.fillMaxWidth()
@@ -418,8 +361,6 @@ private fun ConversationRow(conversation: Conversation, onClick: () -> Unit) {
                 displayId = conversation.peer.id,
                 displayName = conversation.peer.displayName,
                 size = 56,
-                showOnlineIndicator = true,
-                isOnline = conversation.peer.isOnline,
             )
             Spacer(Modifier.width(13.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -444,7 +385,7 @@ private fun ConversationRow(conversation: Conversation, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (lastMessage?.isOutgoing == true) {
                         Icon(
-                            imageVector = Icons.Default.DoneAll,
+                            imageVector = Icons.Default.Done,
                             contentDescription = "Sent",
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.primary,
