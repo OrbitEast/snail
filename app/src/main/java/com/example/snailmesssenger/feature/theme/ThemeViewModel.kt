@@ -7,6 +7,12 @@ class ThemeViewModel(app:Application):AndroidViewModel(app){
  private val prefs=app.getSharedPreferences("snail_theme_engine",0)
  private val _state=MutableStateFlow(load())
  val state=_state.asStateFlow()
+ private val preferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> _state.value = load() }
+ init { prefs.registerOnSharedPreferenceChangeListener(preferenceListener) }
+ override fun onCleared() {
+  prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+  super.onCleared()
+ }
  private fun load()=ThemeState(
   palette=runCatching{SnailPalette.valueOf(prefs.getString("palette","CLASSIC_BLUE")!!)}.getOrDefault(SnailPalette.CLASSIC_BLUE),
   nightMode=runCatching{NightMode.valueOf(prefs.getString("night","SYSTEM")!!)}.getOrDefault(NightMode.SYSTEM),
