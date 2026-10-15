@@ -41,6 +41,13 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
+import com.example.snailmesssenger.core.designsystem.DarkBubbleIn
+import com.example.snailmesssenger.core.designsystem.DarkBubbleOut
+import com.example.snailmesssenger.core.designsystem.LightBubbleIn
+import com.example.snailmesssenger.core.designsystem.LightBubbleOut
+import com.example.snailmesssenger.core.designsystem.ReadCheckmarkGreen
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -194,15 +201,16 @@ fun ChatScreen(
                             Column {
                                 Text(
                                     text = conversation.peer.displayName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.5.sp),
+                                    fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    text = "@${conversation.peer.username}",
+                                    text = "online",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = ReadCheckmarkGreen,
+                                    fontWeight = FontWeight.SemiBold,
                                 )
                             }
                         }
@@ -565,10 +573,21 @@ private fun MessageBubble(message: Message) {
     val messageFontSize = LocalChatTextSize.current
     val bubbleRadius = LocalChatBubbleRadius.current
     val outgoing = message.isOutgoing
-    val bubbleColor = if (outgoing) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.surface
-    val textColor = if (outgoing) MaterialTheme.colorScheme.onPrimary
-        else MaterialTheme.colorScheme.onSurface
+    val isDark = isSystemInDarkTheme()
+
+    val bubbleColor = when {
+        outgoing && isDark -> DarkBubbleOut
+        outgoing && !isDark -> LightBubbleOut
+        !outgoing && isDark -> DarkBubbleIn
+        else -> LightBubbleIn
+    }
+
+    val textColor = when {
+        outgoing && isDark -> Color.White
+        outgoing && !isDark -> Color.Black
+        !outgoing && isDark -> Color.White
+        else -> Color.Black
+    }
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -581,35 +600,41 @@ private fun MessageBubble(message: Message) {
                 shape = RoundedCornerShape(
                     topStart = bubbleRadius,
                     topEnd = bubbleRadius,
-                    bottomStart = if (outgoing) bubbleRadius else 5.dp,
-                    bottomEnd = if (outgoing) 5.dp else bubbleRadius,
+                    bottomStart = if (outgoing) bubbleRadius else 4.dp,
+                    bottomEnd = if (outgoing) 4.dp else bubbleRadius,
                 ),
-                shadowElevation = if (outgoing) 1.dp else 0.dp,
-                modifier = Modifier.widthIn(max = 320.dp),
+                shadowElevation = 0.5.dp,
+                modifier = Modifier.widthIn(max = 310.dp),
             ) {
                 Column(
-                    modifier = Modifier.padding(start = 12.dp, end = 9.dp, top = 8.dp, bottom = 6.dp),
+                    modifier = Modifier.padding(start = 12.dp, end = 10.dp, top = 7.dp, bottom = 5.dp),
                     horizontalAlignment = Alignment.End,
                 ) {
                     Text(
                         text = message.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = messageFontSize, lineHeight = messageFontSize * 1.3f),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = messageFontSize,
+                            lineHeight = messageFontSize * 1.32f,
+                        ),
                         color = textColor,
                     )
-                    Spacer(Modifier.height(3.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.height(2.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End,
+                    ) {
                         Text(
                             text = formatTime(message.timestampMs),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = textColor.copy(alpha = if (outgoing) 0.76f else 0.62f),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = textColor.copy(alpha = if (outgoing) 0.72f else 0.55f),
                         )
                         if (outgoing) {
                             Spacer(Modifier.width(4.dp))
                             Icon(
-                                imageVector = Icons.Default.Done,
-                                contentDescription = "Sent",
-                                modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.88f),
+                                imageVector = Icons.Default.DoneAll,
+                                contentDescription = "Read",
+                                modifier = Modifier.size(16.dp),
+                                tint = if (isDark) ReadCheckmarkGreen else Color(0xFF40C351),
                             )
                         }
                     }

@@ -74,7 +74,38 @@ object DemoMessagingRepository : MessagingRepository {
         mutableConversations.add(0, updated)
         publishChanges()
         persistConversations()
+
+        // Simulate auto-reply for interactive demo feel
+        simulatePeerReply(conversationId, normalizedText)
         return message
+    }
+
+    private fun simulatePeerReply(conversationId: String, userText: String) {
+        val peerResponses = listOf(
+            "Got your message! SNAIL v2.1 UI looks so sleek 🔥",
+            "Hey! Telegram 2026 mode is super clean and fast 🚀",
+            "Awesome update! Love the dark theme and smooth design 💙",
+            "Sounds great! Let's talk soon 🤝",
+            "Thanks for reaching out! Checked out the new features 👌",
+        )
+        val responseText = peerResponses.random()
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        if (index >= 0) {
+            val peerId = mutableConversations[index].peer.id
+            val replyMessage = Message(
+                id = "m${System.currentTimeMillis() + 10}",
+                senderId = peerId,
+                text = responseText,
+                timestampMs = System.currentTimeMillis() + 500,
+            )
+            val updated = mutableConversations[index].copy(
+                messages = mutableConversations[index].messages + replyMessage,
+                peer = mutableConversations[index].peer.copy(isOnline = true),
+            )
+            mutableConversations[index] = updated
+            publishChanges()
+            persistConversations()
+        }
     }
 
     override fun startConversationWith(peerId: String): Conversation {

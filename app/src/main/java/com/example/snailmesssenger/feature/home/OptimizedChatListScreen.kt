@@ -18,13 +18,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Divider
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -90,17 +96,75 @@ fun OptimizedChatListScreen(
             }
         },
     ) { padding ->
+        var selectedFolder by remember { mutableStateOf("All") }
         val showContactResults = searchActive
-        val visibleChats = if (state.query.isBlank()) state.chats else state.matchingChats
+        val folderFilteredChats = remember(selectedFolder, state.chats) {
+            when (selectedFolder) {
+                "Unread" -> state.chats.filter { it.unreadCount > 0 }
+                "Personal" -> state.chats.filter { !it.title.contains("Group", ignoreCase = true) }
+                "Work" -> state.chats.filter { it.title.contains("Dev", ignoreCase = true) || it.title.contains("Work", ignoreCase = true) || it.title.contains("Team", ignoreCase = true) }
+                else -> state.chats
+            }
+        }
+        val visibleChats = if (state.query.isBlank()) folderFilteredChats else state.matchingChats
         val visibleSnailContacts = if (state.query.isBlank()) state.allSnailContacts else state.matchingSnailContacts
         val visibleInviteContacts = if (state.query.isBlank()) state.allInviteContacts else state.matchingInviteContacts
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(bottom = 24.dp),
-        ) {
+
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            if (!searchActive) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    listOf("All", "Personal", "Work", "Unread").forEach { folder ->
+                        val isSelected = selectedFolder == folder
+                        val unreadInFolder = when(folder) {
+                            "Unread" -> state.chats.sumOf { it.unreadCount }
+                            else -> 0
+                        }
+                        Surface(
+                            onClick = { selectedFolder = folder },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(
+                                    text = folder,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                )
+                                if (unreadInFolder > 0) {
+                                    Box(
+                                        modifier = Modifier.clip(CircleShape)
+                                            .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary)
+                                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                                    ) {
+                                        Text(
+                                            text = unreadInFolder.toString(),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 24.dp),
+            ) {
             if (!showContactResults) {
-                if (state.chats.isEmpty()) {
+                if (visibleChats.isEmpty()) {
                     item(key = "empty-chats") {
                         Text(
                             "No conversations yet",
@@ -137,7 +201,7 @@ fun OptimizedChatListScreen(
                                     query = state.query,
                                     onOpen = { onOpenChat(it.id) },
                                 )
-                                Divider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                                HorizontalDivider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                             }
                         }
                 }
@@ -148,7 +212,7 @@ fun OptimizedChatListScreen(
                             item(key = "invite-letter-$letter") { LetterHeader(letter.toString()) }
                             items(contactsForLetter, key = { "invite-contact-${it.id}" }) { contact ->
                                 ContactRowItem(contact = contact, query = state.query)
-                                Divider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                                HorizontalDivider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                             }
                         }
                 }
@@ -165,6 +229,7 @@ fun OptimizedChatListScreen(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -255,7 +320,7 @@ private fun ChatSearchResultRow(
                 }
             }
         }
-        Divider(modifier = Modifier.padding(start = 82.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+        HorizontalDivider(modifier = Modifier.padding(start = 82.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
     }
 }
 

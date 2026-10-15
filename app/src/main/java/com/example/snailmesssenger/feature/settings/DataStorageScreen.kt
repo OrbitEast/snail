@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,13 +60,13 @@ fun DataStorageScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             SnailSectionHeading(text = "Storage Usage")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Storage Usage",
                 subtitle = "Cache: 12.4 MB • Messages: 1.2 MB",
                 icon = Icons.Default.Storage,
             )
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Clear Local Cache",
                 subtitle = "Free up temporary space",
@@ -77,7 +77,7 @@ fun DataStorageScreen(
             Spacer(Modifier.height(Spacing.xl))
 
             SnailSectionHeading(text = "Network Usage")
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Network Usage Stats",
                 subtitle = "Text messaging only (minimal data)",

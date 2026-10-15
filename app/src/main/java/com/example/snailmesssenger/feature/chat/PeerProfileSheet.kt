@@ -20,7 +20,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -129,7 +129,7 @@ fun PeerProfileSheet(
             }
 
             Spacer(Modifier.height(Spacing.xxl))
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
             // Details Sections (Username, Bio, Shared Media)
             SnailSectionRow(
@@ -137,7 +137,7 @@ fun PeerProfileSheet(
                 subtitle = "Username",
                 icon = null,
             )
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             SnailSectionRow(
                 title = peer.bio.ifBlank { "Taking it slow on SNAIL 🐌" },
                 subtitle = "Bio",
@@ -145,7 +145,7 @@ fun PeerProfileSheet(
             )
 
             Spacer(Modifier.height(Spacing.md))
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
             // Shared Media & Files Sections
             SnailSectionHeading(text = "Shared Media")
@@ -163,7 +163,7 @@ fun PeerProfileSheet(
             )
 
             Spacer(Modifier.height(Spacing.md))
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
             SnailSectionRow(
                 title = "Block user",
