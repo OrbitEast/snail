@@ -26,8 +26,8 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # GitHub's Ubuntu runner already includes the Android SDK. Avoid reinstalling
+      # command-line tools here; use the preinstalled SDK for the Gradle build.
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
