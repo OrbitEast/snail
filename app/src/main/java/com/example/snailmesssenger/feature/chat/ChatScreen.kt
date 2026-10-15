@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,12 +24,18 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,9 +44,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +68,7 @@ import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -84,7 +95,10 @@ fun ChatScreen(
                 )
             },
         ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
                 Text("Conversation not found.", style = MaterialTheme.typography.bodyLarge)
             }
         }
@@ -95,12 +109,18 @@ fun ChatScreen(
     var messages by remember { mutableStateOf(conversation.messages) }
     var showProfileSheet by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
-    var showCallDialog by remember { mutableStateOf(false) }
+    var showEmojiPicker by remember { mutableStateOf(false) }
+    var searchVisible by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val filteredMessages = remember(messages, searchQuery) {
+        if (searchQuery.isBlank()) messages
+        else messages.filter { it.text.contains(searchQuery.trim(), ignoreCase = true) }
+    }
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(messages.size, searchQuery) {
+        if (filteredMessages.isNotEmpty() && searchQuery.isBlank()) {
+            listState.animateScrollToItem(filteredMessages.lastIndex)
         }
     }
 
@@ -110,180 +130,290 @@ fun ChatScreen(
         DemoMessagingRepository.sendMessage(conversationId, text)
         messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
         inputText = ""
+        showEmojiPicker = false
     }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .imePadding(),
+        modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding(),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-                title = {
+            Column {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                    title = {
+                        Row(
+                            modifier = Modifier.clip(MaterialTheme.shapes.small)
+                                .clickable { showProfileSheet = true }
+                                .padding(vertical = 3.dp, horizontal = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            SnailAvatar(
+                                displayId = conversation.peer.id,
+                                displayName = conversation.peer.displayName,
+                                size = 42,
+                                showOnlineIndicator = true,
+                                isOnline = conversation.peer.isOnline,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = conversation.peer.displayName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = if (conversation.peer.isOnline) "online" else "@${conversation.peer.username}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (conversation.peer.isOnline)
+                                        com.example.snailmesssenger.core.designsystem.SuccessGreen
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            searchVisible = !searchVisible
+                            if (!searchVisible) searchQuery = ""
+                        }) {
+                            Icon(
+                                imageVector = if (searchVisible) Icons.Default.Close else Icons.Default.Search,
+                                contentDescription = if (searchVisible) "Close search" else "Search messages",
+                            )
+                        }
+                        Box {
+                            IconButton(onClick = { showOverflowMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                            }
+                            DropdownMenu(
+                                expanded = showOverflowMenu,
+                                onDismissRequest = { showOverflowMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("View profile") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showProfileSheet = true
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (searchVisible) "Close search" else "Search messages") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        searchVisible = !searchVisible
+                                        if (searchVisible) searchQuery = ""
+                                    },
+                                )
+                            }
+                        }
+                    },
+                )
+                if (searchVisible) {
                     Row(
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .clickable { showProfileSheet = true }
-                            .padding(vertical = 4.dp, horizontal = 4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        SnailAvatar(
-                            displayId = conversation.peer.id,
-                            displayName = conversation.peer.displayName,
-                            size = 36,
-                            showOnlineIndicator = true,
-                            isOnline = conversation.peer.isOnline,
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(19.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(Modifier.width(Spacing.md))
-                        Column {
-                            Text(
-                                text = conversation.peer.displayName,
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                text = if (conversation.peer.isOnline) "online" else "@${conversation.peer.username}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (conversation.peer.isOnline) {
-                                    com.example.snailmesssenger.core.designsystem.SuccessGreen
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    // Normal voice call button (no video call)
-                    IconButton(onClick = { showCallDialog = true }) {
-                        Icon(Icons.Default.Call, contentDescription = "Voice Call")
-                    }
-                    // Three dots overflow menu
-                    Box {
-                        IconButton(onClick = { showOverflowMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                        }
-                        DropdownMenu(
-                            expanded = showOverflowMenu,
-                            onDismissRequest = { showOverflowMenu = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("View profile") },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showProfileSheet = true
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Mute notifications") },
-                                onClick = { showOverflowMenu = false },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Clear history") },
-                                onClick = { showOverflowMenu = false },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Block user") },
-                                onClick = { showOverflowMenu = false },
+                        Spacer(Modifier.width(10.dp))
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    "Search in conversation",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                ),
                             )
                         }
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear search", modifier = Modifier.size(17.dp))
+                            }
+                        }
                     }
-                },
-            )
+                }
+            }
         },
         bottomBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
+            Column(
+                modifier = Modifier.fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surface)
                     .navigationBarsPadding()
-                    .padding(horizontal = Spacing.sm, vertical = 6.dp),
-                verticalAlignment = Alignment.Bottom,
+                    .padding(top = 7.dp, bottom = 5.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = Spacing.lg),
-                ) {
-                    BasicTextField(
-                        value = inputText,
-                        onValueChange = { inputText = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = Spacing.md),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface,
-                        ),
-                        decorationBox = { innerTextField ->
-                            Box {
-                                if (inputText.isEmpty()) {
-                                    Text(
-                                        text = "Message…",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                innerTextField()
+                if (showEmojiPicker) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .horizontalScrollForEmoji()
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        listOf("😀", "😂", "🥹", "😍", "👍", "❤️", "🔥", "🙏", "🎉", "🤝", "👀", "💯").forEach { emoji ->
+                            Surface(
+                                onClick = { inputText += emoji },
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                            ) {
+                                Text(
+                                    text = emoji,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
+                                    fontSize = 22.sp,
+                                )
                             }
-                        },
-                    )
+                        }
+                    }
                 }
-                Spacer(Modifier.width(Spacing.sm))
-                IconButton(
-                    onClick = { send() },
-                    enabled = inputText.trim().isNotEmpty(),
-                    modifier = Modifier
-                        .size(Spacing.buttonHeight)
-                        .clip(CircleShape)
-                        .background(
-                            if (inputText.trim().isNotEmpty()) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surfaceVariant,
-                        ),
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.Bottom,
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
-                        tint = if (inputText.trim().isNotEmpty()) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
+                    Row(
+                        modifier = Modifier.weight(1f)
+                            .clip(RoundedCornerShape(25.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(start = 4.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        IconButton(
+                            onClick = { showEmojiPicker = !showEmojiPicker },
+                            modifier = Modifier.size(42.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEmotions,
+                                contentDescription = "Emoji picker",
+                                tint = if (showEmojiPicker) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(23.dp),
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.weight(1f).padding(start = 7.dp, bottom = 11.dp, top = 8.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            if (inputText.isEmpty()) {
+                                Text(
+                                    text = "Message",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            BasicTextField(
+                                value = inputText,
+                                onValueChange = { inputText = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = 22.sp,
+                                ),
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Sentences,
+                                    imeAction = ImeAction.Default,
+                                ),
+                                keyboardActions = KeyboardActions(),
+                                singleLine = false,
+                                maxLines = 5,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(
+                        onClick = { send() },
+                        enabled = inputText.trim().isNotEmpty(),
+                        modifier = Modifier.padding(bottom = 1.dp).size(48.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (inputText.trim().isNotEmpty()) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send message",
+                            tint = if (inputText.trim().isNotEmpty()) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(21.dp),
+                        )
+                    }
                 }
             }
         },
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(padding),
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding)
+                .background(MaterialTheme.colorScheme.background),
         ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    horizontal = Spacing.md,
-                    vertical = Spacing.sm,
-                ),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                items(messages, key = { it.id }) { message ->
-                    MessageBubble(message = message)
+            if (searchVisible && searchQuery.isNotBlank()) {
+                Text(
+                    text = "${filteredMessages.size} matching message${if (filteredMessages.size == 1) "" else "s"}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                )
+            }
+            if (filteredMessages.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (searchQuery.isNotBlank()) "No messages found" else "Say hello 👋",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = if (searchQuery.isNotBlank()) "Try another word or phrase."
+                            else "Your private conversation starts here.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 12.dp,
+                        vertical = 12.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    items(filteredMessages, key = { it.id }) { message ->
+                        MessageBubble(message = message)
+                    }
                 }
             }
         }
@@ -293,95 +423,72 @@ fun ChatScreen(
         PeerProfileSheet(
             peer = conversation.peer,
             onDismiss = { showProfileSheet = false },
-            onCallClick = {
-                showProfileSheet = false
-                showCallDialog = true
-            },
-        )
-    }
-
-    if (showCallDialog) {
-        AlertDialog(
-            onDismissRequest = { showCallDialog = false },
-            title = { Text("Voice Call") },
-            text = { Text("Calling ${conversation.peer.displayName} via secure local voice channel...") },
-            confirmButton = {
-                TextButton(onClick = { showCallDialog = false }) { Text("End Call") }
-            },
+            onCallClick = { showProfileSheet = false },
         )
     }
 }
 
-/**
- * Message bubble — Telegram-style: rounded pill-ish bubble with
- * timestamp (and read ticks for outgoing) tucked inside the bubble
- * at the bottom-right of the text block.
- */
 @Composable
 private fun MessageBubble(message: Message) {
     val outgoing = message.isOutgoing
+    val bubbleColor = if (outgoing) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.surface
+    val textColor = if (outgoing) MaterialTheme.colorScheme.onPrimary
+        else MaterialTheme.colorScheme.onSurface
 
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
-        Column(
-            horizontalAlignment = if (outgoing) Alignment.End else Alignment.Start,
-        ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 300.dp)
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 18.dp,
-                            topEnd = 18.dp,
-                            bottomStart = if (outgoing) 18.dp else 6.dp,
-                            bottomEnd = if (outgoing) 6.dp else 18.dp,
-                        ),
-                    )
-                    .background(
-                        if (outgoing) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant,
-                    )
-                    .padding(start = 12.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
+        Column(horizontalAlignment = if (outgoing) Alignment.End else Alignment.Start) {
+            Surface(
+                color = bubbleColor,
+                contentColor = textColor,
+                shape = RoundedCornerShape(
+                    topStart = 18.dp,
+                    topEnd = 18.dp,
+                    bottomStart = if (outgoing) 18.dp else 5.dp,
+                    bottomEnd = if (outgoing) 5.dp else 18.dp,
+                ),
+                shadowElevation = if (outgoing) 1.dp else 0.dp,
+                modifier = Modifier.widthIn(max = 320.dp),
             ) {
-                Column(horizontalAlignment = Alignment.End) {
+                Column(
+                    modifier = Modifier.padding(start = 12.dp, end = 9.dp, top = 8.dp, bottom = 6.dp),
+                    horizontalAlignment = Alignment.End,
+                ) {
                     Text(
                         text = message.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp),
-                        color = if (outgoing) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
+                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 21.sp),
+                        color = textColor,
                     )
-                    Spacer(Modifier.height(2.dp))
-                    // Meta: time (+ ticks for outgoing) right-aligned under the text.
+                    Spacer(Modifier.height(3.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (outgoing) {
-                        Icon(
-                            imageVector = Icons.Default.DoneAll,
-                            contentDescription = "Read",
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+                        Text(
+                            text = formatTime(message.timestampMs),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = if (outgoing) 0.76f else 0.62f),
                         )
-                        Spacer(Modifier.width(3.dp))
+                        if (outgoing) {
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.DoneAll,
+                                contentDescription = "Sent",
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.88f),
+                            )
+                        }
                     }
-                    Text(
-                        text = formatTime(message.timestampMs),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (outgoing) {
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
                 }
             }
         }
-    }
     }
 }
 
 private fun formatTime(ms: Long): String =
     SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
+
+/** Horizontal scrolling without adding a separate visual scrollbar. */
+@Composable
+private fun Row.horizontalScrollForEmoji(): Modifier =
+    this.then(androidx.compose.foundation.horizontalScroll(androidx.compose.foundation.rememberScrollState()))
