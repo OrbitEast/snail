@@ -2,6 +2,8 @@ package com.example.snailmesssenger.data.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.model.MockData
@@ -18,6 +20,7 @@ interface MessagingRepository {
     fun getConversation(id: String): Conversation?
     fun sendMessage(conversationId: String, text: String): Message
     fun startConversationWith(peerId: String): Conversation
+    fun markConversationRead(conversationId: String)
 }
 
 /** Device-local conversation store for the native prototype. */
@@ -27,6 +30,8 @@ object DemoMessagingRepository : MessagingRepository {
         MockData.conversations.map { it.copy(messages = it.messages.toList(), peer = it.peer.copy(isOnline = false)) }
             .toMutableList()
     private var preferences: SharedPreferences? = null
+    private val _conversationsFlow = MutableStateFlow(mutableConversations.toList())
+    val conversationsFlow: StateFlow<List<Conversation>> = _conversationsFlow
 
     fun initialize(context: Context) {
         if (preferences != null) return
@@ -38,6 +43,7 @@ object DemoMessagingRepository : MessagingRepository {
             if (parsed != null) {
                 mutableConversations.clear()
                 mutableConversations.addAll(parsed)
+                _conversationsFlow.value = mutableConversations.toList()
             }
         } else {
             persistConversations()
@@ -64,6 +70,9 @@ object DemoMessagingRepository : MessagingRepository {
             messages = mutableConversations[index].messages + message,
         )
         mutableConversations[index] = updated
+        mutableConversations.removeAt(index)
+        mutableConversations.add(0, updated)
+        publishChanges()
         persistConversations()
         return message
     }
@@ -77,8 +86,21 @@ object DemoMessagingRepository : MessagingRepository {
             peer = peer.copy(isOnline = false),
         )
         mutableConversations.add(0, conversation)
+        publishChanges()
         persistConversations()
         return conversation
+    }
+
+    override fun markConversationRead(conversationId: String) {
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        if (index < 0 || mutableConversations[index].unreadCount == 0) return
+        mutableConversations[index] = mutableConversations[index].copy(unreadCount = 0)
+        publishChanges()
+        persistConversations()
+    }
+
+    private fun publishChanges() {
+        _conversationsFlow.value = mutableConversations.toList()
     }
 
     private fun persistConversations() {
