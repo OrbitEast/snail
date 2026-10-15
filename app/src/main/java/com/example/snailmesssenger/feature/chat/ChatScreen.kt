@@ -79,6 +79,8 @@ import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.snailmesssenger.feature.media.AttachmentViewModel
 import com.example.snailmesssenger.feature.media.SnailAttachmentBottomSheet
+import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
+import com.example.snailmesssenger.feature.theme.LocalChatTextSize
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -537,6 +539,8 @@ fun ChatScreen(
 
 @Composable
 private fun MessageBubble(message: Message) {
+    val messageFontSize = LocalChatTextSize.current
+    val bubbleRadius = LocalChatBubbleRadius.current
     val outgoing = message.isOutgoing
     val bubbleColor = if (outgoing) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.surface
@@ -552,10 +556,10 @@ private fun MessageBubble(message: Message) {
                 color = bubbleColor,
                 contentColor = textColor,
                 shape = RoundedCornerShape(
-                    topStart = 18.dp,
-                    topEnd = 18.dp,
-                    bottomStart = if (outgoing) 18.dp else 5.dp,
-                    bottomEnd = if (outgoing) 5.dp else 18.dp,
+                    topStart = bubbleRadius,
+                    topEnd = bubbleRadius,
+                    bottomStart = if (outgoing) bubbleRadius else 5.dp,
+                    bottomEnd = if (outgoing) 5.dp else bubbleRadius,
                 ),
                 shadowElevation = if (outgoing) 1.dp else 0.dp,
                 modifier = Modifier.widthIn(max = 320.dp),
@@ -566,7 +570,7 @@ private fun MessageBubble(message: Message) {
                 ) {
                     Text(
                         text = message.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 21.sp),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = messageFontSize, lineHeight = messageFontSize * 1.3f),
                         color = textColor,
                     )
                     Spacer(Modifier.height(3.dp))
