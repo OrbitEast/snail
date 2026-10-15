@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +65,7 @@ import com.example.snailmesssenger.feature.media.AttachmentViewModel
 import com.example.snailmesssenger.feature.media.MediaPreviewScreen
 import com.example.snailmesssenger.feature.media.SnailAttachmentBottomSheet
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatDetailScreen(
     conversationId: String,
