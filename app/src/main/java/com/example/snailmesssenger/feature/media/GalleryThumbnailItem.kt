@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,8 +53,7 @@ fun GalleryThumbnailItem(media: MediaAsset, selectionOrder: Int?, onClick: () ->
         if (selected) {
             Surface(modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(25.dp), shape = CircleShape, color = MediaBlue, shadowElevation = 2.dp) {
                 Box(contentAlignment = Alignment.Center) {
-                    if (selectionOrder == 1) Icon(Icons.Default.Check, contentDescription = "Selected", tint = Color.White, modifier = Modifier.size(16.dp))
-                    else Text(selectionOrder.toString(), color = Color.White, fontSize = 12.sp)
+                    Text(selectionOrder.toString(), color = Color.White, fontSize = 12.sp)
                 }
             }
         } else {
