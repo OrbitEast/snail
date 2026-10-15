@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
@@ -38,6 +39,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,11 +71,12 @@ fun HomeScreen(
     onOpenProfile: () -> Unit,
     onOpenSettings: () -> Unit,
     onFindPeople: () -> Unit,
+    onOpenMenu: () -> Unit,
     onLogout: () -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
-    val conversations = remember { DemoMessagingRepository.getConversations() }
+    val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
     val unreadTotal = conversations.sumOf { it.unreadCount }
     val filtered = remember(searchQuery, selectedFilter, conversations) {
         conversations.filter { conversation ->
@@ -99,11 +102,14 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth()
                         .height(58.dp)
-                        .padding(start = 22.dp, end = 12.dp),
+                        .padding(start = 8.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    IconButton(onClick = onOpenMenu) {
+                        Icon(Icons.Default.Menu, contentDescription = "Open navigation menu")
+                    }
                     SnailLogo(
-                        size = 36.dp,
+                        size = 34.dp,
                         backgroundColor = MaterialTheme.colorScheme.primaryContainer,
                         shellColor = MaterialTheme.colorScheme.primary,
                     )
@@ -111,8 +117,8 @@ fun HomeScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "SNAIL",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
@@ -138,53 +144,15 @@ fun HomeScreen(
                     }
                 }
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(22.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Your space. Your people.",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                text = if (unreadTotal > 0) "You have $unreadTotal unread ${if (unreadTotal == 1) "message" else "messages"}" else "Private chats, at your pace.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
-                            )
-                        }
-                        Box(
-                            modifier = Modifier.size(44.dp).clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ChatBubbleOutline,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        }
-                    }
-                }
-
                 SearchField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     listOf("All", "Unread").forEach { filter ->
                         val selected = selectedFilter == filter
@@ -195,7 +163,7 @@ fun HomeScreen(
                                 else MaterialTheme.colorScheme.surfaceVariant,
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
@@ -261,7 +229,7 @@ fun HomeScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(bottom = 20.dp, top = 2.dp),
+                contentPadding = PaddingValues(bottom = 24.dp, top = 0.dp),
             ) {
                 item(key = "list_header") {
                     Row(
@@ -354,13 +322,13 @@ private fun ConversationRow(conversation: Conversation, onClick: () -> Unit) {
         Row(
             modifier = Modifier.fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 18.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SnailAvatar(
                 displayId = conversation.peer.id,
                 displayName = conversation.peer.displayName,
-                size = 56,
+                size = 52,
             )
             Spacer(Modifier.width(13.dp))
             Column(modifier = Modifier.weight(1f)) {
