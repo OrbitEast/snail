@@ -53,7 +53,7 @@ private val wallpaperColors=listOf("#E7EBF0","#F4F8F9","#D9EAF5","#CDE8DE","#F7E
    scaleY = if (s.wallpaperMotion) motionScale else 1f
    renderEffect = if (s.wallpaperBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) RenderEffect.createBlurEffect(12f, 12f, Shader.TileMode.CLAMP).asComposeRenderEffect() else null
   },contentScale=ContentScale.Crop)
-  if(s.doodlePattern) Text("◌  ✳  ⌁  ◇  ☼  ♧  ◌",color=Color.White.copy(alpha=.35f),style=MaterialTheme.typography.headlineMedium)
+  if(s.doodlePattern) Text("◌  ✳  ⌁  ◇  ☼  ♧  ◌",modifier=Modifier.align(Alignment.TopStart).padding(8.dp),color=Color.White.copy(alpha=.45f),style=MaterialTheme.typography.headlineMedium)
   Text("Snail chat preview",color=if(s.wallpaperHex in listOf("#1C2733","#121212","#000000","#34495E"))Color.White else Color(0xFF263238))
  }
  OutlinedButton(onClick={imagePicker.launch(arrayOf("image/*"))},modifier=Modifier.fillMaxWidth()){Text(if(s.wallpaperUri==null)"Choose image wallpaper" else "Change image wallpaper")}
