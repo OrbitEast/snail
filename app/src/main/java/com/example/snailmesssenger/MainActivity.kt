@@ -9,8 +9,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
-import com.example.snailmesssenger.core.designsystem.SnailTheme
+import com.example.snailmesssenger.feature.theme.SnailTheme
+import com.example.snailmesssenger.feature.theme.ThemeViewModel
 import com.example.snailmesssenger.core.navigation.SnailNavHost
 import com.example.snailmesssenger.data.preferences.UserPreferences
 import com.example.snailmesssenger.data.repository.DemoAuthRepository
@@ -26,9 +28,10 @@ class MainActivity : ComponentActivity() {
         DemoMessagingRepository.initialize(applicationContext)
         setContent {
             val preferences = remember { UserPreferences(context) }
-            val theme by preferences.theme.collectAsState()
+            val themeViewModel: ThemeViewModel = viewModel()
+            val themeState by themeViewModel.state.collectAsState()
 
-            SnailTheme(themePreference = theme) {
+            SnailTheme(state = themeState) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     SnailNavHost(preferences = preferences)
                 }
