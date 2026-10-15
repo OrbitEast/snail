@@ -14,6 +14,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.snailmessenger.feature.chat.ChatDetailScreen
+import com.example.snailmesssenger.feature.theme.ChatSettingsScreen
+import com.example.snailmesssenger.feature.theme.WallpaperPickerScreen
 import com.example.snailmesssenger.feature.call.CallSessionScreen
 import com.example.snailmesssenger.core.navigation.SnailRoute
 import com.example.snailmesssenger.data.preferences.UserPreferences
@@ -99,7 +101,9 @@ fun SnailNavHost(navController: NavHostController = rememberNavController(), pre
         composable(SnailRoute.PRIVACY_SECURITY) { PrivacySecurityScreen(onBack = { navController.popBackStack() }) }
         composable(SnailRoute.NOTIFICATIONS) { NotificationsScreen(preferences = preferences, onBack = { navController.popBackStack() }) }
         composable(SnailRoute.DATA_STORAGE) { DataStorageScreen(onBack = { navController.popBackStack() }) }
-        composable(SnailRoute.APPEARANCE) { AppearanceScreen(preferences = preferences, onBack = { navController.popBackStack() }) }
+        composable(SnailRoute.APPEARANCE) { AppearanceScreen(preferences = preferences, onBack = { navController.popBackStack() }, onOpenChatSettings = { navController.navigate(SnailRoute.CHAT_SETTINGS) { launchSingleTop = true } }) }
+        composable(SnailRoute.CHAT_SETTINGS) { ChatSettingsScreen(onBack = { navController.popBackStack() }, onOpenWallpaper = { navController.navigate(SnailRoute.WALLPAPER_PICKER) { launchSingleTop = true } }) }
+        composable(SnailRoute.WALLPAPER_PICKER) { WallpaperPickerScreen(onBack = { navController.popBackStack() }) }
         composable(SnailRoute.EDIT_PROFILE) { EditProfileScreen(onBack = { navController.popBackStack() }) }
         composable(SnailRoute.FIND_PEOPLE) {
             FindPeopleScreen(onBack = { navController.popBackStack() }, onStartConversation = { peerId ->
