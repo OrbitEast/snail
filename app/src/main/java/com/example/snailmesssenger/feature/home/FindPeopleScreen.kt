@@ -19,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -48,6 +49,12 @@ fun FindPeopleScreen(
     onStartConversation: (String) -> Unit,
 ) {
     val contacts = remember { DemoMessagingRepository.getConversations().map { it.peer } }
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredContacts = contacts.filter { contact ->
+        searchQuery.isBlank() ||
+            contact.displayName.contains(searchQuery.trim(), ignoreCase = true) ||
+            contact.username.contains(searchQuery.trim().removePrefix("@"), ignoreCase = true)
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().statusBarsPadding(),
@@ -73,14 +80,33 @@ fun FindPeopleScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.sm),
             )
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.sm),
+                singleLine = true,
+                label = { Text("Search by name or username") },
+                placeholder = { Text("@username") },
+            )
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(contacts, key = { it.id }) { contact ->
-                    PersonRow(contact = contact, onClick = { onStartConversation(contact.id) })
-                    Divider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                        modifier = Modifier.padding(start = 84.dp),
-                    )
+                if (filteredContacts.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No demo contacts match that search.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(Spacing.xl),
+                        )
+                    }
+                } else {
+                    items(filteredContacts, key = { it.id }) { contact ->
+                        PersonRow(contact = contact, onClick = { onStartConversation(contact.id) })
+                        Divider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(start = 84.dp),
+                        )
+                    }
                 }
             }
         }
@@ -100,8 +126,6 @@ private fun PersonRow(contact: User, onClick: () -> Unit) {
             displayId = contact.id,
             displayName = contact.displayName,
             size = 48,
-            showOnlineIndicator = true,
-            isOnline = contact.isOnline,
         )
         Spacer(Modifier.width(Spacing.md))
         Column(modifier = Modifier.weight(1f)) {
