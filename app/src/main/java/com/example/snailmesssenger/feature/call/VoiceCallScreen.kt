@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val VoiceBlue = Color(0xFF2481CC)
 
 @Composable
 fun VoiceCallScreen(
@@ -65,9 +64,9 @@ fun VoiceCallScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(210.dp)) {
-                Box(Modifier.size(188.dp).scale(pulse * ringScale).background(VoiceBlue.copy(alpha = 0.10f), CircleShape))
-                Box(Modifier.size(158.dp).scale(pulse).background(VoiceBlue.copy(alpha = 0.14f), CircleShape))
-                Surface(modifier = Modifier.size(122.dp), shape = CircleShape, color = VoiceBlue, contentColor = Color.White, shadowElevation = 18.dp) {
+                Box(Modifier.size(188.dp).scale(pulse * ringScale).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), CircleShape))
+                Box(Modifier.size(158.dp).scale(pulse).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape))
+                Surface(modifier = Modifier.size(122.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primary, contentColor = Color.White, shadowElevation = 18.dp) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(state.avatarInitials.take(2).uppercase(), style = MaterialTheme.typography.headlineLarge)
                     }
@@ -100,7 +99,7 @@ fun VoiceCallScreen(
             Surface(
                 onClick = onBack,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 40.dp),
-                color = VoiceBlue,
+                color = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
                 shape = CircleShape,
             ) { Text("Done", modifier = Modifier.padding(horizontal = 30.dp, vertical = 13.dp)) }
