@@ -24,6 +24,7 @@ import com.example.snailmesssenger.data.preferences.UserPreferences
 private val TelegramBlue = Color(0xFF2481CC)
 private val SectionGrey = Color(0xFF71808D)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeepSettingsScreen(
     preferences: UserPreferences,
