@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
@@ -64,6 +65,7 @@ import com.example.snailmesssenger.feature.media.SnailAttachmentBottomSheet
 fun ChatDetailScreen(
     conversationId: String,
     onBack: () -> Unit,
+    onStartCall: (String) -> Unit = {},
     viewModel: ChatDetailViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -120,8 +122,11 @@ fun ChatDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Default.Call, contentDescription = "Call")
+                    IconButton(onClick = { onStartCall("voice") }) {
+                        Icon(Icons.Default.Call, contentDescription = "Voice call")
+                    }
+                    IconButton(onClick = { onStartCall("video") }) {
+                        Icon(Icons.Default.Videocam, contentDescription = "Video call")
                     }
                     IconButton(onClick = {}) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More options")
