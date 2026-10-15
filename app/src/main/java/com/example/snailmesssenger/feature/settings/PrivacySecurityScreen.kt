@@ -42,6 +42,7 @@ fun PrivacySecurityScreen(
     var photoOption by remember { mutableStateOf("Everybody") }
     var passcodeEnabled by remember { mutableStateOf(false) }
     var twoStepEnabled by remember { mutableStateOf(false) }
+    var unsupportedFeature by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().statusBarsPadding(),
@@ -66,7 +67,7 @@ fun PrivacySecurityScreen(
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Last Seen & Online",
-                subtitle = lastSeenOption,
+                subtitle = "$lastSeenOption · preview only",
                 icon = Icons.Default.Visibility,
                 onClick = {
                     lastSeenOption = if (lastSeenOption == "My Contacts") "Nobody" else "My Contacts"
@@ -75,7 +76,7 @@ fun PrivacySecurityScreen(
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Profile Photo",
-                subtitle = photoOption,
+                subtitle = "$photoOption · preview only",
                 icon = Icons.Default.Security,
                 onClick = {
                     photoOption = if (photoOption == "Everybody") "My Contacts" else "Everybody"
@@ -86,7 +87,7 @@ fun PrivacySecurityScreen(
                 title = "Blocked Users",
                 subtitle = "0 blocked",
                 icon = Icons.Default.Block,
-                onClick = {},
+                onClick = { unsupportedFeature = "Blocked Users" },
             )
 
             Spacer(Modifier.height(Spacing.xl))
@@ -95,26 +96,41 @@ fun PrivacySecurityScreen(
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Passcode Lock",
-                subtitle = if (passcodeEnabled) "Enabled" else "Disabled",
+                subtitle = "Not available in local demo",
                 icon = Icons.Default.Lock,
-                onClick = { passcodeEnabled = !passcodeEnabled },
+                onClick = { unsupportedFeature = "Passcode Lock" },
             )
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Two-Step Verification",
-                subtitle = if (twoStepEnabled) "Active" else "Off",
+                subtitle = "Not available in local demo",
                 icon = Icons.Default.Security,
-                onClick = { twoStepEnabled = !twoStepEnabled },
+                onClick = { unsupportedFeature = "Two-Step Verification" },
             )
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(
                 title = "Active Sessions",
-                subtitle = "1 active device (This device)",
+                subtitle = "Session management is not available in demo",
                 icon = Icons.Default.Devices,
-                onClick = {},
+                onClick = { unsupportedFeature = "Active Sessions" },
             )
 
             Spacer(Modifier.height(Spacing.xxxl))
         }
+    }
+
+    unsupportedFeature?.let { feature ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { unsupportedFeature = null },
+            title = { Text("$feature unavailable") },
+            text = {
+                Text("This control needs real account and security services. It is not enabled in the local prototype.")
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { unsupportedFeature = null }) {
+                    Text("OK")
+                }
+            },
+        )
     }
 }
