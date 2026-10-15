@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.snailmesssenger.core.designsystem.SnailAvatar
+import com.example.snailmesssenger.core.designsystem.SnailLogo
 import com.example.snailmesssenger.core.designsystem.SnailEmptyState
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.repository.DemoAuthRepository
@@ -102,6 +103,12 @@ fun HomeScreen(
                         .padding(start = 22.dp, end = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    SnailLogo(
+                        size = 36.dp,
+                        backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                        shellColor = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "SNAIL",
