@@ -22,6 +22,7 @@ import com.example.snailmesssenger.feature.auth.WelcomeScreen
 import com.example.snailmesssenger.feature.home.FindPeopleScreen
 import com.example.snailmesssenger.feature.home.MainTabsScreen
 import com.example.snailmesssenger.feature.profile.ProfileScreen
+import com.example.snailmesssenger.feature.security.TwoStepVerificationScreen
 import com.example.snailmesssenger.feature.settings.AppearanceScreen
 import com.example.snailmesssenger.feature.settings.DataStorageScreen
 import com.example.snailmesssenger.feature.settings.EditProfileScreen
@@ -32,61 +33,38 @@ import com.example.snailmesssenger.feature.settings.SettingsScreen
 private const val TRANSITION_MS = 280
 
 @Composable
-fun SnailNavHost(
-    navController: NavHostController = rememberNavController(),
-    preferences: UserPreferences,
-) {
+fun SnailNavHost(navController: NavHostController = rememberNavController(), preferences: UserPreferences) {
     val animationsEnabled by preferences.animationsEnabled.collectAsState()
+    val enterTransition = if (animationsEnabled) fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(animationSpec = spring(stiffness = 420f), initialOffsetX = { it / 3 }) else fadeIn(tween(0))
+    val exitTransition = if (animationsEnabled) fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(animationSpec = spring(stiffness = 420f), targetOffsetX = { -it / 3 }) else fadeOut(tween(0))
+    val popEnterTransition = if (animationsEnabled) fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(animationSpec = spring(stiffness = 420f), initialOffsetX = { -it / 3 }) else fadeIn(tween(0))
+    val popExitTransition = if (animationsEnabled) fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(animationSpec = spring(stiffness = 420f), targetOffsetX = { it / 3 }) else fadeOut(tween(0))
 
-    val enterTransition = if (animationsEnabled) {
-        fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(animationSpec = spring(stiffness = 420f), initialOffsetX = { it / 3 })
-    } else fadeIn(tween(0))
-    val exitTransition = if (animationsEnabled) {
-        fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(animationSpec = spring(stiffness = 420f), targetOffsetX = { -it / 3 })
-    } else fadeOut(tween(0))
-    val popEnterTransition = if (animationsEnabled) {
-        fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(animationSpec = spring(stiffness = 420f), initialOffsetX = { -it / 3 })
-    } else fadeIn(tween(0))
-    val popExitTransition = if (animationsEnabled) {
-        fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(animationSpec = spring(stiffness = 420f), targetOffsetX = { it / 3 })
-    } else fadeOut(tween(0))
-
-    NavHost(
-        navController = navController,
-        startDestination = SnailRoute.WELCOME,
-        enterTransition = { enterTransition },
-        exitTransition = { exitTransition },
-        popEnterTransition = { popEnterTransition },
-        popExitTransition = { popExitTransition },
-    ) {
+    NavHost(navController = navController, startDestination = SnailRoute.WELCOME, enterTransition = { enterTransition }, exitTransition = { exitTransition }, popEnterTransition = { popEnterTransition }, popExitTransition = { popExitTransition }) {
         composable(SnailRoute.WELCOME) {
-            WelcomeScreen(
-                onGetStarted = { navController.navigate(SnailRoute.REGISTER) { launchSingleTop = true } },
-                onHaveAccount = { navController.navigate(SnailRoute.LOGIN) { launchSingleTop = true } },
-            )
+            WelcomeScreen(onGetStarted = { navController.navigate(SnailRoute.REGISTER) { launchSingleTop = true } }, onHaveAccount = { navController.navigate(SnailRoute.LOGIN) { launchSingleTop = true } })
         }
         composable(SnailRoute.LOGIN) {
             LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(SnailRoute.HOME) {
-                        popUpTo(SnailRoute.WELCOME) { inclusive = true }
-                        launchSingleTop = true
+                onLoginSuccess = { twoStepRequired ->
+                    if (twoStepRequired) {
+                        navController.navigate(SnailRoute.TWO_STEP) { launchSingleTop = true }
+                    } else {
+                        navController.navigate(SnailRoute.HOME) { popUpTo(SnailRoute.WELCOME) { inclusive = true }; launchSingleTop = true }
                     }
                 },
                 onCreateAccount = { navController.navigate(SnailRoute.REGISTER) { launchSingleTop = true } },
                 onBackToWelcome = { navController.popBackStack() },
             )
         }
-        composable(SnailRoute.REGISTER) {
-            RegisterScreen(
-                onRegisterSuccess = {
-                    navController.navigate(SnailRoute.HOME) {
-                        popUpTo(SnailRoute.WELCOME) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onBackToLogin = { navController.navigate(SnailRoute.LOGIN) { launchSingleTop = true } },
+        composable(SnailRoute.TWO_STEP) {
+            TwoStepVerificationScreen(
+                onVerified = { navController.navigate(SnailRoute.HOME) { popUpTo(SnailRoute.WELCOME) { inclusive = true }; launchSingleTop = true } },
+                onBack = { navController.popBackStack() },
             )
+        }
+        composable(SnailRoute.REGISTER) {
+            RegisterScreen(onRegisterSuccess = { navController.navigate(SnailRoute.HOME) { popUpTo(SnailRoute.WELCOME) { inclusive = true }; launchSingleTop = true } }, onBackToLogin = { navController.navigate(SnailRoute.LOGIN) { launchSingleTop = true } })
         }
         composable(SnailRoute.HOME) {
             MainTabsScreen(
@@ -98,12 +76,7 @@ fun SnailNavHost(
                 onOpenDataStorage = { navController.navigate(SnailRoute.DATA_STORAGE) { launchSingleTop = true } },
                 onOpenAppearance = { navController.navigate(SnailRoute.APPEARANCE) { launchSingleTop = true } },
                 onOpenEditProfile = { navController.navigate(SnailRoute.EDIT_PROFILE) { launchSingleTop = true } },
-                onLogout = {
-                    navController.navigate(SnailRoute.WELCOME) {
-                        popUpTo(0) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
+                onLogout = { navController.navigate(SnailRoute.WELCOME) { popUpTo(0) { inclusive = true }; launchSingleTop = true } },
             )
         }
         composable(SnailRoute.CHAT) { entry ->
@@ -111,28 +84,10 @@ fun SnailNavHost(
             ChatDetailScreen(conversationId = conversationId, onBack = { navController.popBackStack() })
         }
         composable(SnailRoute.PROFILE) {
-            ProfileScreen(
-                onBack = { navController.popBackStack() },
-                onOpenSettings = { navController.navigate(SnailRoute.SETTINGS) { launchSingleTop = true } },
-                onLogout = {
-                    navController.navigate(SnailRoute.WELCOME) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
-                },
-            )
+            ProfileScreen(onBack = { navController.popBackStack() }, onOpenSettings = { navController.navigate(SnailRoute.SETTINGS) { launchSingleTop = true } }, onLogout = { navController.navigate(SnailRoute.WELCOME) { popUpTo(0) { inclusive = true }; launchSingleTop = true } })
         }
         composable(SnailRoute.SETTINGS) {
-            SettingsScreen(
-                preferences = preferences,
-                onBack = { navController.popBackStack() },
-                onOpenProfile = { navController.navigate(SnailRoute.PROFILE) { launchSingleTop = true } },
-                onOpenPrivacySecurity = { navController.navigate(SnailRoute.PRIVACY_SECURITY) { launchSingleTop = true } },
-                onOpenNotifications = { navController.navigate(SnailRoute.NOTIFICATIONS) { launchSingleTop = true } },
-                onOpenDataStorage = { navController.navigate(SnailRoute.DATA_STORAGE) { launchSingleTop = true } },
-                onOpenAppearance = { navController.navigate(SnailRoute.APPEARANCE) { launchSingleTop = true } },
-                onOpenEditProfile = { navController.navigate(SnailRoute.EDIT_PROFILE) { launchSingleTop = true } },
-                onLogout = {
-                    navController.navigate(SnailRoute.WELCOME) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
-                },
-            )
+            SettingsScreen(preferences = preferences, onBack = { navController.popBackStack() }, onOpenProfile = { navController.navigate(SnailRoute.PROFILE) { launchSingleTop = true } }, onOpenPrivacySecurity = { navController.navigate(SnailRoute.PRIVACY_SECURITY) { launchSingleTop = true } }, onOpenNotifications = { navController.navigate(SnailRoute.NOTIFICATIONS) { launchSingleTop = true } }, onOpenDataStorage = { navController.navigate(SnailRoute.DATA_STORAGE) { launchSingleTop = true } }, onOpenAppearance = { navController.navigate(SnailRoute.APPEARANCE) { launchSingleTop = true } }, onOpenEditProfile = { navController.navigate(SnailRoute.EDIT_PROFILE) { launchSingleTop = true } }, onLogout = { navController.navigate(SnailRoute.WELCOME) { popUpTo(0) { inclusive = true }; launchSingleTop = true } })
         }
         composable(SnailRoute.PRIVACY_SECURITY) { PrivacySecurityScreen(onBack = { navController.popBackStack() }) }
         composable(SnailRoute.NOTIFICATIONS) { NotificationsScreen(preferences = preferences, onBack = { navController.popBackStack() }) }
@@ -140,14 +95,11 @@ fun SnailNavHost(
         composable(SnailRoute.APPEARANCE) { AppearanceScreen(preferences = preferences, onBack = { navController.popBackStack() }) }
         composable(SnailRoute.EDIT_PROFILE) { EditProfileScreen(onBack = { navController.popBackStack() }) }
         composable(SnailRoute.FIND_PEOPLE) {
-            FindPeopleScreen(
-                onBack = { navController.popBackStack() },
-                onStartConversation = { peerId ->
-                    val conversation = DemoMessagingRepository.startConversationWith(peerId)
-                    navController.popBackStack()
-                    navController.navigate(SnailRoute.chat(conversation.id)) { launchSingleTop = true }
-                },
-            )
+            FindPeopleScreen(onBack = { navController.popBackStack() }, onStartConversation = { peerId ->
+                val conversation = DemoMessagingRepository.startConversationWith(peerId)
+                navController.popBackStack()
+                navController.navigate(SnailRoute.chat(conversation.id)) { launchSingleTop = true }
+            })
         }
     }
 }
