@@ -1,4 +1,4 @@
-package com.example.snailmessenger.feature.home
+package com.example.snailmesssenger.feature.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
