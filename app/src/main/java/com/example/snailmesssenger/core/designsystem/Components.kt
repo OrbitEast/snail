@@ -177,7 +177,7 @@ private val avatarPalette = listOf(
 )
 
 private fun colorForUser(id: String): Color =
-    avatarPalette[(id.hashCode().let { if (it < 0) -it else it }) % avatarPalette.size]
+    avatarPalette[Math.floorMod(id.hashCode(), avatarPalette.size)]
 
 /**
  * Circular avatar with initials. Falls back to the first letter of the display name.
