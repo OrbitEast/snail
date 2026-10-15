@@ -32,6 +32,26 @@ class UserPreferences(context: Context) {
         _animationsEnabled.value = enabled
     }
 
+    var privateChatNotifications: Boolean
+        get() = prefs.getBoolean(KEY_PRIVATE_CHAT_NOTIFICATIONS, true)
+        set(value) { prefs.edit().putBoolean(KEY_PRIVATE_CHAT_NOTIFICATIONS, value).apply() }
+
+    var messagePreviews: Boolean
+        get() = prefs.getBoolean(KEY_MESSAGE_PREVIEWS, true)
+        set(value) { prefs.edit().putBoolean(KEY_MESSAGE_PREVIEWS, value).apply() }
+
+    var notificationSound: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFICATION_SOUND, true)
+        set(value) { prefs.edit().putBoolean(KEY_NOTIFICATION_SOUND, value).apply() }
+
+    var notificationVibration: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFICATION_VIBRATION, true)
+        set(value) { prefs.edit().putBoolean(KEY_NOTIFICATION_VIBRATION, value).apply() }
+
+    var inAppSounds: Boolean
+        get() = prefs.getBoolean(KEY_IN_APP_SOUNDS, true)
+        set(value) { prefs.edit().putBoolean(KEY_IN_APP_SOUNDS, value).apply() }
+
     private fun loadTheme(): ThemePreference =
         runCatching { ThemePreference.valueOf(prefs.getString(KEY_THEME, ThemePreference.SYSTEM.name)!!) }
             .getOrDefault(ThemePreference.SYSTEM)
@@ -42,5 +62,10 @@ class UserPreferences(context: Context) {
     companion object {
         private const val KEY_THEME = "theme"
         private const val KEY_ANIMATIONS = "animations"
+        private const val KEY_PRIVATE_CHAT_NOTIFICATIONS = "private_chat_notifications"
+        private const val KEY_MESSAGE_PREVIEWS = "message_previews"
+        private const val KEY_NOTIFICATION_SOUND = "notification_sound"
+        private const val KEY_NOTIFICATION_VIBRATION = "notification_vibration"
+        private const val KEY_IN_APP_SOUNDS = "in_app_sounds"
     }
 }
