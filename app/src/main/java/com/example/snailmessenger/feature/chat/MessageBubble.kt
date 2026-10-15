@@ -24,14 +24,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val IncomingBubble = Color(0xFFFFFFFF)
-private val OutgoingBubble = Color(0xFFE8F5D8)
-
 @Composable
-fun MessageBubble(
-    message: Message,
-    modifier: Modifier = Modifier,
-) {
+fun MessageBubble(message: Message, modifier: Modifier = Modifier) {
+    val isDark = MaterialTheme.colorScheme.background.luminanceValue() < 0.5f
+    val bubbleColor = when {
+        message.isOutgoing && isDark -> Color(0xFF1D69A6)
+        message.isOutgoing -> Color(0xFFE8F5D8)
+        isDark -> Color(0xFF18212B)
+        else -> Color.White
+    }
+    val textColor = if (isDark) Color(0xFFF1F5F9) else Color(0xFF222222)
     val shape = if (message.isOutgoing) {
         RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
     } else {
@@ -39,32 +41,19 @@ fun MessageBubble(
     }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 2.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
         horizontalArrangement = if (message.isOutgoing) Arrangement.End else Arrangement.Start,
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth(0.82f)
-                .clip(shape)
-                .background(if (message.isOutgoing) OutgoingBubble else IncomingBubble)
+            modifier = Modifier.fillMaxWidth(0.82f).clip(shape).background(bubbleColor)
                 .padding(start = 11.dp, top = 7.dp, end = 8.dp, bottom = 6.dp),
         ) {
             Column {
-                Text(
-                    text = message.text,
-                    color = Color(0xFF222222),
-                    fontSize = 16.sp,
-                    lineHeight = 21.sp,
-                )
-                Row(
-                    modifier = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Text(text = message.text, color = textColor, fontSize = 16.sp, lineHeight = 21.sp)
+                Row(modifier = Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = message.timestamp,
-                        color = Color(0xFF8A96A3),
+                        color = if (isDark) Color(0xFFB8C4CF) else Color(0xFF8A96A3),
                         fontSize = 10.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
@@ -74,7 +63,7 @@ fun MessageBubble(
                         Icon(
                             imageVector = Icons.Default.DoneAll,
                             contentDescription = if (message.isRead) "Read" else "Sent",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (isDark) Color(0xFF8FD3FF) else MaterialTheme.colorScheme.primary,
                             modifier = Modifier.width(15.dp),
                         )
                     }
@@ -83,3 +72,5 @@ fun MessageBubble(
         }
     }
 }
+
+private fun Color.luminanceValue(): Float = 0.2126f * red + 0.7152f * green + 0.0722f * blue
