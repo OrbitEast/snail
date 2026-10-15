@@ -1,6 +1,8 @@
 package com.example.snailmesssenger.feature.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -274,7 +276,7 @@ fun ChatScreen(
                 if (showEmojiPicker) {
                     Row(
                         modifier = Modifier.fillMaxWidth()
-                            .horizontalScrollForEmoji()
+                            .horizontalScroll(rememberScrollState())
                             .padding(horizontal = 12.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
@@ -488,7 +490,3 @@ private fun MessageBubble(message: Message) {
 private fun formatTime(ms: Long): String =
     SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
 
-/** Horizontal scrolling without adding a separate visual scrollbar. */
-@Composable
-private fun Row.horizontalScrollForEmoji(): Modifier =
-    this.then(androidx.compose.foundation.horizontalScroll(androidx.compose.foundation.rememberScrollState()))
