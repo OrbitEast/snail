@@ -2,7 +2,6 @@ package com.example.snailmessenger.feature.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,10 +10,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,7 +75,7 @@ fun ChatItemRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (chat.isOutgoing) {
-                        androidx.compose.material3.Icon(
+                        Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Sent",
                             tint = MaterialTheme.colorScheme.primary,
@@ -97,10 +98,10 @@ fun ChatItemRow(
                 }
             }
         }
-        androidx.compose.foundation.layout.Box(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 80.dp)
+                .padding(start = 82.dp)
                 .height(0.6.dp)
                 .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
         )
