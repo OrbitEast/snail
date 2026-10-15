@@ -31,17 +31,19 @@ import androidx.compose.ui.Modifier
 import com.example.snailmesssenger.core.designsystem.SnailSectionHeading
 import com.example.snailmesssenger.core.designsystem.SnailSectionRow
 import com.example.snailmesssenger.core.designsystem.Spacing
+import com.example.snailmesssenger.data.preferences.UserPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
+    preferences: UserPreferences,
     onBack: () -> Unit,
 ) {
-    var chatsNotifications by remember { mutableStateOf(true) }
-    var messagePreviews by remember { mutableStateOf(true) }
-    var soundEnabled by remember { mutableStateOf(true) }
-    var vibrationEnabled by remember { mutableStateOf(true) }
-    var inAppSounds by remember { mutableStateOf(true) }
+    var chatsNotifications by remember { mutableStateOf(preferences.privateChatNotifications) }
+    var messagePreviews by remember { mutableStateOf(preferences.messagePreviews) }
+    var soundEnabled by remember { mutableStateOf(preferences.notificationSound) }
+    var vibrationEnabled by remember { mutableStateOf(preferences.notificationVibration) }
+    var inAppSounds by remember { mutableStateOf(preferences.inAppSounds) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().statusBarsPadding(),
@@ -69,7 +71,7 @@ fun NotificationsScreen(
                 subtitle = if (chatsNotifications) "Enabled" else "Disabled",
                 icon = Icons.Default.Notifications,
                 trailing = {
-                    Switch(checked = chatsNotifications, onCheckedChange = { chatsNotifications = it })
+                    Switch(checked = chatsNotifications, onCheckedChange = { chatsNotifications = it; preferences.privateChatNotifications = it })
                 },
             )
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
@@ -78,7 +80,7 @@ fun NotificationsScreen(
                 subtitle = "Show text in notification",
                 icon = Icons.Default.VolumeUp,
                 trailing = {
-                    Switch(checked = messagePreviews, onCheckedChange = { messagePreviews = it })
+                    Switch(checked = messagePreviews, onCheckedChange = { messagePreviews = it; preferences.messagePreviews = it })
                 },
             )
 
@@ -91,7 +93,7 @@ fun NotificationsScreen(
                 subtitle = "Default",
                 icon = Icons.Default.VolumeUp,
                 trailing = {
-                    Switch(checked = soundEnabled, onCheckedChange = { soundEnabled = it })
+                    Switch(checked = soundEnabled, onCheckedChange = { soundEnabled = it; preferences.notificationSound = it })
                 },
             )
             Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
@@ -100,7 +102,7 @@ fun NotificationsScreen(
                 subtitle = "Default",
                 icon = Icons.Default.Smartphone,
                 trailing = {
-                    Switch(checked = vibrationEnabled, onCheckedChange = { vibrationEnabled = it })
+                    Switch(checked = vibrationEnabled, onCheckedChange = { vibrationEnabled = it; preferences.notificationVibration = it })
                 },
             )
 
@@ -113,7 +115,7 @@ fun NotificationsScreen(
                 subtitle = "Play sound when app is open",
                 icon = Icons.Default.VolumeUp,
                 trailing = {
-                    Switch(checked = inAppSounds, onCheckedChange = { inAppSounds = it })
+                    Switch(checked = inAppSounds, onCheckedChange = { inAppSounds = it; preferences.inAppSounds = it })
                 },
             )
 
