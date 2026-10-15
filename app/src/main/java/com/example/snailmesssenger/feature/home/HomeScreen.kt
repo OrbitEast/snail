@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -24,9 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,7 +58,10 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-/** SNAIL inbox with a polished, Telegram-inspired private-chat layout. */
+/**
+ * SNAIL inbox: a compact, familiar messenger layout with original SNAIL branding.
+ * Uses the app's current Material theme so light/dark appearance stays consistent.
+ */
 @Composable
 fun HomeScreen(
     onOpenChat: (String) -> Unit,
@@ -68,11 +74,14 @@ fun HomeScreen(
     var selectedFilter by remember { mutableStateOf("All") }
     val conversations = remember { DemoMessagingRepository.getConversations() }
     val onlinePeople = remember(conversations) { conversations.filter { it.peer.isOnline } }
+    val unreadTotal = conversations.sumOf { it.unreadCount }
     val filtered = remember(searchQuery, selectedFilter, conversations) {
         conversations.filter { conversation ->
-            val matchesSearch = searchQuery.isBlank() ||
-                conversation.peer.displayName.contains(searchQuery, ignoreCase = true) ||
-                conversation.peer.username.contains(searchQuery, ignoreCase = true)
+            val query = searchQuery.trim()
+            val matchesSearch = query.isBlank() ||
+                conversation.peer.displayName.contains(query, ignoreCase = true) ||
+                conversation.peer.username.contains(query, ignoreCase = true) ||
+                conversation.messages.any { it.text.contains(query, ignoreCase = true) }
             val matchesFilter = selectedFilter != "Unread" || conversation.unreadCount > 0
             matchesSearch && matchesFilter
         }
@@ -85,90 +94,84 @@ fun HomeScreen(
             Column(
                 modifier = Modifier.fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surface)
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 10.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth()
-                        .padding(start = 22.dp, end = 12.dp, top = 10.dp, bottom = 4.dp),
+                        .height(58.dp)
+                        .padding(start = 22.dp, end = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "SNAIL",
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "Your private space",
+                            text = if (unreadTotal > 0) "$unreadTotal unread messages" else "Private conversations",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    IconButton(onClick = onFindPeople) {
-                        Icon(Icons.Default.Edit, contentDescription = "New message",
-                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp),
+                        )
                     }
                     IconButton(onClick = onOpenProfile) {
                         SnailAvatar(
                             displayId = DemoAuthRepository.currentUser?.id ?: "me",
                             displayName = DemoAuthRepository.currentUser?.displayName ?: "You",
-                            size = 38,
+                            size = 36,
                         )
                     }
                 }
 
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 8.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 15.dp, vertical = 13.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Search, contentDescription = null,
-                            modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(10.dp))
-                        Box(modifier = Modifier.weight(1f)) {
-                            if (searchQuery.isEmpty()) {
-                                Text("Search people or messages",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            BasicTextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface),
-                                singleLine = true,
-                            )
-                        }
-                    }
-                }
+                SearchField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
 
                 Row(
-                    modifier = Modifier.padding(start = 18.dp, top = 2.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     listOf("All", "Unread").forEach { filter ->
                         val selected = selectedFilter == filter
                         Surface(
                             onClick = { selectedFilter = filter },
-                            shape = RoundedCornerShape(50),
+                            shape = RoundedCornerShape(18.dp),
                             color = if (selected) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.surfaceVariant,
                         ) {
-                            Text(
-                                text = if (filter == "Unread")
-                                    "Unread ${conversations.count { it.unreadCount > 0 }}" else "All chats",
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                                color = if (selected) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(
+                                    text = if (filter == "Unread") "Unread" else "All chats",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (filter == "Unread" && unreadTotal > 0) {
+                                    Text(
+                                        text = unreadTotal.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                            else MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -179,22 +182,25 @@ fun HomeScreen(
                 onClick = onFindPeople,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(18.dp),
+                shape = CircleShape,
             ) {
                 Icon(Icons.Default.Edit, contentDescription = "New message")
             }
         },
     ) { padding ->
         if (filtered.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
                 if (searchQuery.isNotBlank() || selectedFilter == "Unread") {
                     SnailEmptyState(
                         icon = Icons.Default.Search,
                         heading = if (selectedFilter == "Unread" && searchQuery.isBlank())
-                            "All caught up" else "No results found",
+                            "You're all caught up" else "No chats found",
                         supportingText = if (selectedFilter == "Unread" && searchQuery.isBlank())
-                            "New unread messages will appear here."
-                            else "Try another name or switch to all chats.",
+                            "Unread conversations will appear here."
+                        else "Try a different name, username or message.",
                         actionText = "Show all chats",
                         onAction = { searchQuery = ""; selectedFilter = "All" },
                     )
@@ -211,31 +217,41 @@ fun HomeScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 92.dp, top = 4.dp),
+                contentPadding = PaddingValues(bottom = 20.dp, top = 2.dp),
             ) {
                 if (searchQuery.isBlank() && selectedFilter == "All" && onlinePeople.isNotEmpty()) {
-                    item(key = "online_header") {
+                    item(key = "active_header") {
                         Row(
                             modifier = Modifier.fillMaxWidth()
-                                .padding(start = 22.dp, end = 22.dp, top = 8.dp, bottom = 12.dp),
+                                .padding(start = 22.dp, end = 22.dp, top = 8.dp, bottom = 13.dp),
                             verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
                         ) {
-                            Text("ACTIVE NOW", style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.width(8.dp))
-                            Box(modifier = Modifier.size(6.dp).clip(CircleShape)
-                                .background(com.example.snailmesssenger.core.designsystem.SuccessGreen))
+                            Text(
+                                text = "ACTIVE NOW",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Box(
+                                modifier = Modifier.size(6.dp).clip(CircleShape)
+                                    .background(com.example.snailmesssenger.core.designsystem.SuccessGreen),
+                            )
                         }
                     }
-                    item(key = "online_people") {
+                    item(key = "active_people") {
                         Row(
-                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                                .padding(start = 18.dp, end = 18.dp, bottom = 18.dp),
-                            horizontalArrangement = Arrangement.spacedBy(18.dp),
+                            modifier = Modifier.fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(start = 18.dp, end = 18.dp, bottom = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(17.dp),
                         ) {
                             onlinePeople.forEach { conversation ->
                                 Column(
-                                    modifier = Modifier.width(62.dp).clickable { onOpenChat(conversation.id) },
+                                    modifier = Modifier.width(58.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { onOpenChat(conversation.id) }
+                                        .padding(vertical = 2.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     SnailAvatar(
@@ -258,9 +274,11 @@ fun HomeScreen(
                         }
                     }
                 }
-                item(key = "messages_header") {
+
+                item(key = "list_header") {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(start = 22.dp, end = 22.dp, top = 2.dp, bottom = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
@@ -270,13 +288,72 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
                         )
-                        Text("${filtered.size}", style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = filtered.size.toString(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
+
                 items(filtered, key = { it.id }) { conversation ->
-                    ConversationRow(conversation = conversation, onClick = { onOpenChat(conversation.id) })
+                    ConversationRow(
+                        conversation = conversation,
+                        onClick = { onOpenChat(conversation.id) },
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(start = 14.dp, end = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            modifier = Modifier.size(21.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(10.dp))
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            if (value.isEmpty()) {
+                Text(
+                    text = "Search",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                ),
+                singleLine = true,
+            )
+        }
+        if (value.isNotEmpty()) {
+            IconButton(onClick = { onValueChange("") }, modifier = Modifier.size(38.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Clear search",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -285,70 +362,91 @@ fun HomeScreen(
 @Composable
 private fun ConversationRow(conversation: Conversation, onClick: () -> Unit) {
     val lastMessage = conversation.messages.lastOrNull()
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SnailAvatar(
-            displayId = conversation.peer.id,
-            displayName = conversation.peer.displayName,
-            size = 56,
-            showOnlineIndicator = true,
-            isOnline = conversation.peer.isOnline,
-        )
-        Spacer(Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = conversation.peer.displayName,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = lastMessage?.let { formatRowTimestamp(it.timestampMs) } ?: "",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (conversation.unreadCount > 0) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.height(5.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (lastMessage?.isOutgoing == true) {
-                    Icon(Icons.Default.DoneAll, contentDescription = "Sent",
-                        modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(3.dp))
-                }
-                Text(
-                    text = when {
-                        lastMessage == null -> "Start a conversation"
-                        lastMessage.isOutgoing -> "You: ${lastMessage.text}"
-                        else -> lastMessage.text
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (conversation.unreadCount > 0) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 18.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SnailAvatar(
+                displayId = conversation.peer.id,
+                displayName = conversation.peer.displayName,
+                size = 56,
+                showOnlineIndicator = true,
+                isOnline = conversation.peer.isOnline,
+            )
+            Spacer(Modifier.width(13.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = conversation.peer.displayName,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary)
-                            .defaultMinSize(minWidth = 22.dp).height(22.dp).padding(horizontal = 6.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(conversation.unreadCount.toString(),
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onPrimary)
+                    Text(
+                        text = lastMessage?.let { formatRowTimestamp(it.timestampMs) } ?: "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (conversation.unreadCount > 0) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(5.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (lastMessage?.isOutgoing == true) {
+                        Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = "Sent",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.width(3.dp))
+                    }
+                    Text(
+                        text = when {
+                            lastMessage == null -> "Start a conversation"
+                            lastMessage.isOutgoing -> "You: ${lastMessage.text}"
+                            else -> lastMessage.text
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (conversation.unreadCount > 0)
+                            MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (conversation.unreadCount > 0) FontWeight.Medium else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (conversation.unreadCount > 0) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier.clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .defaultMinSize(minWidth = 22.dp)
+                                .height(22.dp)
+                                .padding(horizontal = 6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = conversation.unreadCount.toString(),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
                     }
                 }
             }
         }
+        Box(
+            modifier = Modifier.fillMaxWidth()
+                .padding(start = 87.dp, end = 18.dp)
+                .height(0.6.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        )
     }
 }
 
@@ -359,8 +457,10 @@ private fun formatRowTimestamp(ms: Long): String {
         now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
     return when {
         sameDay -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
-        now.timeInMillis - ms < 7L * 86_400_000L -> SimpleDateFormat("EEE", Locale.getDefault()).format(Date(ms))
-        now.get(Calendar.YEAR) == then.get(Calendar.YEAR) -> SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(ms))
+        now.timeInMillis - ms < 7L * 86_400_000L ->
+            SimpleDateFormat("EEE", Locale.getDefault()).format(Date(ms))
+        now.get(Calendar.YEAR) == then.get(Calendar.YEAR) ->
+            SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(ms))
         else -> SimpleDateFormat("dd/MM/yy", Locale.getDefault()).format(Date(ms))
     }
 }
