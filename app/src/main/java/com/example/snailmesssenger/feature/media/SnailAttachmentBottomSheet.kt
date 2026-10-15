@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Poll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 
 private val AttachmentBlue = Color(0xFF2481CC)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SnailAttachmentBottomSheet(state: AttachmentUiState, onDismiss: () -> Unit, onShortcut: (AttachmentShortcut) -> Unit, onToggleMedia: (String) -> Unit, onPreview: (String?) -> Unit) {
     if (!state.isSheetVisible) return
