@@ -129,11 +129,13 @@ fun MainTabsScreen(
                     onOpenAppearance = onOpenAppearance,
                     onOpenEditProfile = onOpenEditProfile,
                     onLogout = onLogout,
+                    showBackButton = false,
                 )
                 else -> ProfileScreen(
                     onBack = { selectedTab = 0 },
                     onOpenSettings = { selectedTab = 2 },
                     onLogout = onLogout,
+                    showBackButton = false,
                 )
             }
         }
