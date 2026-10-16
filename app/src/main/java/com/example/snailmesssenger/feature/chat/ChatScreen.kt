@@ -92,6 +92,7 @@ import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
 import com.example.snailmesssenger.feature.theme.LocalChatTextSize
 import com.example.snailmesssenger.feature.theme.LocalSnailThemeState
+import com.example.snailmesssenger.feature.theme.NightMode
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -106,6 +107,11 @@ fun ChatScreen(
     onVideoCall: () -> Unit = {},
 ) {
     val themeState = LocalSnailThemeState.current
+    val isDarkTheme = when (themeState.nightMode) {
+        NightMode.SYSTEM -> isSystemInDarkTheme()
+        NightMode.LIGHT -> false
+        NightMode.DARK -> true
+    }
     val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
     val conversation = conversations.firstOrNull { it.id == conversationId }
     if (conversation == null) {
@@ -529,7 +535,7 @@ fun ChatScreen(
                     verticalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
                     items(filteredMessages, key = { it.id }) { message ->
-                        MessageBubble(message = message)
+                        MessageBubble(message = message, isDark = isDarkTheme)
                     }
                 }
             }
@@ -547,11 +553,10 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(message: Message) {
+private fun MessageBubble(message: Message, isDark: Boolean) {
     val messageFontSize = LocalChatTextSize.current
     val bubbleRadius = LocalChatBubbleRadius.current
     val outgoing = message.isOutgoing
-    val isDark = isSystemInDarkTheme()
 
     val bubbleColor = when {
         outgoing && isDark -> DarkBubbleOut
