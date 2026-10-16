@@ -144,8 +144,7 @@ fun MainTabsScreen(
             unreadCount = unreadCount,
             onTabSelected = { selectedTab = it },
             modifier = Modifier.align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .navigationBarsPadding(),
         )
     }
 
@@ -168,15 +167,15 @@ private fun ModernBottomBar(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(30.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 6.dp,
-        shadowElevation = 16.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f)),
+        tonalElevation = 3.dp,
+        shadowElevation = 12.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.32f)),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 5.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
