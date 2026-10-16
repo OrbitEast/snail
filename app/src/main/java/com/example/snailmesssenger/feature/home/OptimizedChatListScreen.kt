@@ -1,5 +1,11 @@
 package com.example.snailmesssenger.feature.home
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -113,7 +119,7 @@ fun OptimizedChatListScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (!searchActive) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().animateContentSize().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     listOf("All", "Personal", "Work", "Unread").forEach { folder ->
@@ -161,7 +167,7 @@ fun OptimizedChatListScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(bottom = 24.dp),
+                contentPadding = PaddingValues(bottom = 112.dp),
             ) {
             if (!showContactResults) {
                 if (visibleChats.isEmpty()) {
@@ -173,7 +179,7 @@ fun OptimizedChatListScreen(
                         )
                     }
                 } else {
-                    items(items = state.chats, key = { chat -> "chat-${chat.id}" }) { chat ->
+                    items(items = visibleChats, key = { chat -> "chat-${chat.id}" }) { chat ->
                         ChatSearchResultRow(
                             chat = chat,
                             query = "",
@@ -286,7 +292,7 @@ private fun ChatSearchResultRow(
                     Box(
                         modifier = Modifier.align(Alignment.BottomEnd).size(14.dp)
                             .clip(CircleShape).background(MaterialTheme.colorScheme.surface).padding(2.dp)
-                            .clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                            .clip(CircleShape).background(Color(0xFF2DBE60)),
                     )
                 }
             }
@@ -304,12 +310,34 @@ private fun ChatSearchResultRow(
                     Text(chat.timestamp, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(3.dp))
-                HighlightedSearchText(
-                    text = chat.lastMessage,
-                    query = query,
-                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                    maxLines = 1,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    HighlightedSearchText(
+                        text = chat.lastMessage,
+                        query = query,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = if (chat.unreadCount > 0) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = if (chat.unreadCount > 0) FontWeight.Medium else FontWeight.Normal,
+                        ),
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                    )
+                    if (chat.unreadCount > 0) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier.clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = chat.unreadCount.coerceAtMost(99).let { if (it == 99) "99+" else it.toString() },
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            )
+                        }
+                    }
+                }
                 if (query.isNotBlank()) {
                     HighlightedSearchText(
                         text = chat.username,
