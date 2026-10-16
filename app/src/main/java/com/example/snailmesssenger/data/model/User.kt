@@ -29,6 +29,7 @@ data class Conversation(
     val title: String? = null,
     val participantIds: List<String> = emptyList(),
     val createdBy: String? = null,
+    val pinnedMessageId: String? = null,
 )
 
 /** A single chat message. */

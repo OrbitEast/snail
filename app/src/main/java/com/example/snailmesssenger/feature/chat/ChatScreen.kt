@@ -347,7 +347,15 @@ fun ChatScreen(
 
     val filteredMessages = remember(messages, searchQuery) {
         if (searchQuery.isBlank()) messages
-        else messages.filter { it.text.contains(searchQuery.trim(), ignoreCase = true) }
+        else messages.filter {
+            it.text.contains(searchQuery.trim(), ignoreCase = true) ||
+                it.pollQuestion.orEmpty().contains(searchQuery.trim(), ignoreCase = true) ||
+                it.pollOptions.any { option -> option.contains(searchQuery.trim(), ignoreCase = true) } ||
+                it.attachmentName.orEmpty().contains(searchQuery.trim(), ignoreCase = true)
+        }
+    }
+    val pinnedMessage = conversation.pinnedMessageId?.let { pinnedId ->
+        messages.firstOrNull { it.id == pinnedId }
     }
 
     LaunchedEffect(messages.size, searchQuery) {
@@ -876,6 +884,60 @@ fun ChatScreen(
                 )
             }
             Column(modifier = Modifier.fillMaxSize()) {
+            pinnedMessage?.let { pinned ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)
+                        .clickable {
+                            if (searchQuery.isNotBlank()) {
+                                searchVisible = false
+                                searchQuery = ""
+                            }
+                            val targetIndex = messages.indexOfFirst { it.id == pinned.id }
+                            if (targetIndex >= 0) {
+                                coroutineScope.launch { listState.animateScrollToItem(targetIndex) }
+                            }
+                        },
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.86f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.PushPin,
+                            contentDescription = "Pinned message",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(19.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "PINNED MESSAGE",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp),
+                            )
+                            Text(
+                                pinned.pollQuestion ?: pinned.text.ifBlank { pinned.attachmentName ?: "Attachment" },
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Jump to pinned message",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(17.dp),
+                        )
+                    }
+                }
+            }
             if (searchVisible && searchQuery.isNotBlank()) {
                 Text(
                     text = "${filteredMessages.size} matching message${if (filteredMessages.size == 1) "" else "s"}",
@@ -1120,6 +1182,17 @@ fun ChatScreen(
                                 Text(emoji, modifier = Modifier.padding(9.dp), fontSize = 20.sp)
                             }
                         }
+                    }
+                    TextButton(
+                        onClick = {
+                            DemoMessagingRepository.setPinnedMessage(
+                                conversationId,
+                                if (conversation.pinnedMessageId == message.id) null else message.id,
+                            )
+                            selectedMessage = null
+                        },
+                    ) {
+                        Text(if (conversation.pinnedMessageId == message.id) "Unpin message" else "Pin message")
                     }
                     TextButton(
                         onClick = {

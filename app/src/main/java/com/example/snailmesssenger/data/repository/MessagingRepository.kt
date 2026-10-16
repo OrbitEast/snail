@@ -39,6 +39,7 @@ interface MessagingRepository {
     fun startConversationWith(peerId: String): Conversation
     fun markConversationRead(conversationId: String)
     fun clearConversationHistory(conversationId: String)
+    fun setPinnedMessage(conversationId: String, messageId: String?)
 }
 
 /** Device-local conversation store for the native prototype. */
@@ -357,6 +358,20 @@ object DemoMessagingRepository : MessagingRepository {
         return conversation
     }
 
+    override fun setPinnedMessage(conversationId: String, messageId: String?) {
+        val conversationIndex = mutableConversations.indexOfFirst { it.id == conversationId }
+        require(conversationIndex >= 0) { "Conversation not found." }
+        if (messageId != null) {
+            require(mutableConversations[conversationIndex].messages.any { it.id == messageId }) {
+                "Message to pin could not be found."
+            }
+        }
+        mutableConversations[conversationIndex] =
+            mutableConversations[conversationIndex].copy(pinnedMessageId = messageId)
+        publishChanges()
+        persistConversations()
+    }
+
     override fun clearConversationHistory(conversationId: String) {
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
         if (index < 0) return
@@ -420,6 +435,7 @@ object DemoMessagingRepository : MessagingRepository {
                     .put("title", conversation.title ?: JSONObject.NULL)
                     .put("participantIds", JSONArray(conversation.participantIds))
                     .put("createdBy", conversation.createdBy ?: JSONObject.NULL)
+                    .put("pinnedMessageId", conversation.pinnedMessageId ?: JSONObject.NULL)
                     .put("messages", messages),
             )
         }
@@ -484,6 +500,7 @@ object DemoMessagingRepository : MessagingRepository {
                             buildList { for (memberIndex in 0 until ids.length()) add(ids.optString(memberIndex)) }
                         }.orEmpty(),
                         createdBy = item.optString("createdBy").takeUnless { it.isBlank() || it == "null" },
+                        pinnedMessageId = item.optString("pinnedMessageId").takeUnless { it.isBlank() || it == "null" },
                     ),
                 )
             }
