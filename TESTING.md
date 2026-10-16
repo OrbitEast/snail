@@ -6,7 +6,7 @@
 - [ ] Register two local demo accounts and verify duplicate usernames are rejected.
 - [ ] Sign in/out and confirm local account persistence.
 - [ ] Send text, edit your own text, delete a message, add/remove a reaction, reply, forward between local chats, create/vote in a poll, and search within a chat.
-- [ ] Pick multiple photos/videos and documents (up to 10 per action); verify every attachment renders and survives app restart.
+- [ ] Pick multiple photos/videos and documents (up to 10 per action), add a caption, and verify attachment ordering and persistence.
 - [ ] Record a voice message, cancel it by navigating away while recording, and verify no partial recording is sent.
 - [ ] Test light, dark, and system themes, chat wallpapers, and bottom navigation across small and large screens.
 - [ ] Open an unread chat and verify its inbox badge clears; mute/unmute a chat from the row and profile sheet and verify state persists.

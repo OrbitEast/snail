@@ -135,6 +135,12 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+private data class PendingAttachment(
+    val uri: Uri,
+    val mimeType: String,
+    val name: String,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -187,6 +193,9 @@ fun ChatScreen(
     var searchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showAttachmentMenu by remember { mutableStateOf(false) }
+    var showAttachmentCaptionDialog by remember { mutableStateOf(false) }
+    var pendingAttachments by remember { mutableStateOf(emptyList<PendingAttachment>()) }
+    var attachmentCaption by remember { mutableStateOf("") }
     var showPollCreator by remember { mutableStateOf(false) }
     var pollQuestion by remember { mutableStateOf("") }
     var pollOptions by remember { mutableStateOf(listOf("", "")) }
@@ -203,6 +212,22 @@ fun ChatScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
+
+    fun queuePickedAttachments(uris: List<Uri>) {
+        val prepared = uris.take(10).map { uri ->
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            PendingAttachment(
+                uri = uri,
+                mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream",
+                name = resolveDisplayName(context, uri),
+            )
+        }
+        pendingAttachments = prepared
+        attachmentCaption = ""
+        showAttachmentCaptionDialog = prepared.isNotEmpty()
+    }
 
     fun startVoiceRecording() {
         if (isRecordingVoice) return
@@ -299,46 +324,12 @@ fun ChatScreen(
     val mediaPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
     ) { uris ->
-        uris.take(10).forEach { uri ->
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
-            DemoMessagingRepository.sendAttachment(
-                conversationId = conversationId,
-                uri = uri.toString(),
-                mimeType = mimeType,
-                name = resolveDisplayName(context, uri),
-            )
-        }
-        if (uris.isNotEmpty()) {
-            messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
-        }
+        queuePickedAttachments(uris)
     }
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
-        uris.take(10).forEach { uri ->
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
-            DemoMessagingRepository.sendAttachment(
-                conversationId = conversationId,
-                uri = uri.toString(),
-                mimeType = mimeType,
-                name = resolveDisplayName(context, uri),
-            )
-        }
-        if (uris.isNotEmpty()) {
-            messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
-        }
-    }
-
-    LaunchedEffect(conversationId, conversation.unreadCount) {
-        if (conversation.unreadCount > 0) {
-            DemoMessagingRepository.markConversationRead(conversationId)
-        }
+        queuePickedAttachments(uris)
     }
 
     LaunchedEffect(conversation.messages) {
@@ -880,6 +871,78 @@ fun ChatScreen(
             }
             }
         }
+    }
+
+    if (showAttachmentCaptionDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showAttachmentCaptionDialog = false
+                pendingAttachments = emptyList()
+                attachmentCaption = ""
+            },
+            title = { Text("Send ${pendingAttachments.size} item${if (pendingAttachments.size == 1) "" else "s"}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = attachmentCaption,
+                        onValueChange = { attachmentCaption = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Add a caption") },
+                        placeholder = { Text("Write a caption…") },
+                        maxLines = 4,
+                    )
+                    pendingAttachments.take(4).forEach { attachment ->
+                        Text(
+                            text = attachment.name,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (pendingAttachments.size > 4) {
+                        Text(
+                            "+ ${pendingAttachments.size - 4} more",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Text(
+                        "Items are added separately on this device; the caption is attached to the first item.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = pendingAttachments.isNotEmpty(),
+                    onClick = {
+                        val queued = pendingAttachments
+                        queued.forEachIndexed { index, attachment ->
+                            DemoMessagingRepository.sendAttachment(
+                                conversationId = conversationId,
+                                uri = attachment.uri.toString(),
+                                mimeType = attachment.mimeType,
+                                name = attachment.name,
+                                caption = if (index == 0) attachmentCaption else "",
+                            )
+                        }
+                        messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+                        pendingAttachments = emptyList()
+                        attachmentCaption = ""
+                        showAttachmentCaptionDialog = false
+                    },
+                ) { Text("Send") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAttachmentCaptionDialog = false
+                    pendingAttachments = emptyList()
+                    attachmentCaption = ""
+                }) { Text("Cancel") }
+            },
+        )
     }
 
     if (showPollCreator) {
