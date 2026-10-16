@@ -97,9 +97,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
+import android.Manifest
 import android.content.Intent
 import android.content.Context
+import android.content.pm.PackageManager
+import android.media.MediaRecorder
 import android.net.Uri
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.io.File
 import android.provider.OpenableColumns
 import com.example.snailmesssenger.core.designsystem.snailGlass
 import coil.compose.AsyncImage
@@ -173,9 +188,107 @@ fun ChatScreen(
     var forwardingMessage by remember { mutableStateOf<Message?>(null) }
     var editingMessageId by remember { mutableStateOf<String?>(null) }
     var replyTarget by remember { mutableStateOf<Message?>(null) }
+    var isRecordingVoice by remember { mutableStateOf(false) }
+    var recordingSeconds by remember { mutableStateOf(0) }
+    var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
+    var voiceRecordingFile by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
+
+    fun startVoiceRecording() {
+        if (isRecordingVoice) return
+        val directory = File(context.filesDir, "voice_messages")
+        val outputFile = File(directory, "voice_${System.currentTimeMillis()}.m4a")
+        var recorder: MediaRecorder? = null
+        try {
+            check(directory.exists() || directory.mkdirs()) { "Unable to create voice-message storage." }
+            recorder = MediaRecorder()
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            recorder.setAudioEncodingBitRate(96_000)
+            recorder.setAudioSamplingRate(44_100)
+            recorder.setOutputFile(outputFile.absolutePath)
+            recorder.prepare()
+            recorder.start()
+            voiceRecordingFile = outputFile
+            mediaRecorder = recorder
+            recordingSeconds = 0
+            isRecordingVoice = true
+        } catch (error: Exception) {
+            runCatching { recorder?.release() }
+            outputFile.delete()
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(error.message ?: "Could not start voice recording.")
+            }
+        }
+    }
+
+    fun stopAndSendVoiceRecording() {
+        val activeRecorder = mediaRecorder ?: return
+        val outputFile = voiceRecordingFile
+        val duration = recordingSeconds
+        val recordedSuccessfully = runCatching {
+            activeRecorder.stop()
+            true
+        }.getOrDefault(false)
+        runCatching { activeRecorder.reset() }
+        runCatching { activeRecorder.release() }
+        mediaRecorder = null
+        voiceRecordingFile = null
+        isRecordingVoice = false
+        recordingSeconds = 0
+
+        if (!recordedSuccessfully || outputFile == null || !outputFile.exists() || outputFile.length() < 512L) {
+            outputFile?.delete()
+            coroutineScope.launch { snackbarHostState.showSnackbar("Voice message was too short. Record for a little longer.") }
+            return
+        }
+
+        val contentUri = runCatching {
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", outputFile)
+        }.getOrNull()
+        if (contentUri == null) {
+            coroutineScope.launch { snackbarHostState.showSnackbar("Could not prepare the voice-message file.") }
+            return
+        }
+        DemoMessagingRepository.sendAttachment(
+            conversationId = conversationId,
+            uri = contentUri.toString(),
+            mimeType = "audio/mp4",
+            name = "Voice message ${formatRecordingDuration(duration)}.m4a",
+            caption = "Voice message",
+        )
+        messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+    }
+
+    val microphonePermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) startVoiceRecording()
+        else coroutineScope.launch { snackbarHostState.showSnackbar("Microphone permission is needed to record a voice message.") }
+    }
+
+    LaunchedEffect(isRecordingVoice) {
+        while (isRecordingVoice) {
+            delay(1_000)
+            recordingSeconds += 1
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            val activeRecorder = mediaRecorder
+            if (activeRecorder != null) {
+                runCatching { activeRecorder.stop() }
+                runCatching { activeRecorder.release() }
+            }
+            if (isRecordingVoice) voiceRecordingFile?.delete()
+        }
+    }
 
     val mediaPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -255,6 +368,7 @@ fun ChatScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding(),
         containerColor = parseChatColor(themeState.wallpaperHex),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             Column {
                 TopAppBar(
@@ -585,20 +699,44 @@ fun ChatScreen(
                                 modifier = Modifier.size(23.dp),
                             )
                         }
+                        IconButton(
+                            onClick = {
+                                if (isRecordingVoice) {
+                                    stopAndSendVoiceRecording()
+                                } else if (
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                                    PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    startVoiceRecording()
+                                } else {
+                                    microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            },
+                            modifier = Modifier.size(38.dp),
+                        ) {
+                            Icon(
+                                imageVector = if (isRecordingVoice) Icons.Default.Stop else Icons.Default.Mic,
+                                contentDescription = if (isRecordingVoice) "Stop and send voice message" else "Record voice message",
+                                tint = if (isRecordingVoice) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(21.dp),
+                            )
+                        }
                         Box(
                             modifier = Modifier.weight(1f).padding(start = 7.dp, bottom = 11.dp, top = 8.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             if (inputText.isEmpty()) {
                                 Text(
-                                    text = "Message",
+                                    text = if (isRecordingVoice) "Recording · ${formatRecordingDuration(recordingSeconds)}" else "Message",
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (isRecordingVoice) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             BasicTextField(
                                 value = inputText,
                                 onValueChange = { inputText = it },
+                                enabled = !isRecordingVoice,
                                 modifier = Modifier.fillMaxWidth(),
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -617,7 +755,7 @@ fun ChatScreen(
                     Spacer(Modifier.width(8.dp))
                     IconButton(
                         onClick = { send() },
-                        enabled = inputText.trim().isNotEmpty(),
+                        enabled = inputText.trim().isNotEmpty() && !isRecordingVoice,
                         modifier = Modifier.padding(bottom = 1.dp).size(48.dp)
                             .clip(CircleShape)
                             .background(
@@ -866,7 +1004,7 @@ private fun MessageBubble(
         else -> Color.Black
     }
     val isPlaceholderCaption = message.attachmentUri != null &&
-        (message.text == "Photo" || message.text == "Video" || message.text.startsWith("File: "))
+        (message.text == "Photo" || message.text == "Video" || message.text == "Voice message" || message.text.startsWith("File: "))
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -937,6 +1075,25 @@ private fun MessageBubble(
                                     .clickable { showImagePreview = true },
                                 contentScale = ContentScale.Crop,
                             )
+                            mimeType.startsWith("audio/") -> Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable { openExternalAttachment(context, message) }
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Default.GraphicEq, contentDescription = null, modifier = Modifier.size(34.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column(horizontalAlignment = Alignment.Start) {
+                                    Text("Voice message", fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        "Tap to play · ${message.attachmentName.orEmpty()}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.7f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                             mimeType.startsWith("video/") -> Row(
                                 modifier = Modifier.fillMaxWidth()
                                     .clickable { openExternalAttachment(context, message) }
@@ -1073,6 +1230,9 @@ private fun openExternalAttachment(context: Context, message: Message) {
         context.startActivity(Intent.createChooser(intent, "Open attachment"))
     }
 }
+
+private fun formatRecordingDuration(totalSeconds: Int): String =
+    String.format(Locale.getDefault(), "%02d:%02d", totalSeconds / 60, totalSeconds % 60)
 
 private fun formatTime(ms: Long): String =
     SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
