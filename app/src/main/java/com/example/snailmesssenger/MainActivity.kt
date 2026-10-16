@@ -61,8 +61,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
-
 
     override fun onStart() {
         super.onStart()
@@ -73,3 +71,4 @@ class MainActivity : ComponentActivity() {
         AppLockManager.onAppBackgrounded()
         super.onStop()
     }
+}
