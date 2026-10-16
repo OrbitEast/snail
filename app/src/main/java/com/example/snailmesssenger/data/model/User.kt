@@ -32,6 +32,13 @@ data class Conversation(
     val pinnedMessageId: String? = null,
 )
 
+/** A draft is stored locally per conversation and never sent until the user taps Send. */
+data class MessageDraft(
+    val text: String = "",
+    val replyToMessageId: String? = null,
+    val replyToText: String? = null,
+)
+
 /** A single chat message. */
 data class Message(
     val id: String,

@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.ConversationKind
 import com.example.snailmesssenger.data.model.Message
+import com.example.snailmesssenger.data.model.MessageDraft
 import com.example.snailmesssenger.data.model.MockData
 import com.example.snailmesssenger.data.model.User
 import org.json.JSONArray
@@ -40,6 +41,9 @@ interface MessagingRepository {
     fun markConversationRead(conversationId: String)
     fun clearConversationHistory(conversationId: String)
     fun setPinnedMessage(conversationId: String, messageId: String?)
+    fun getDraft(conversationId: String): MessageDraft
+    fun saveDraft(conversationId: String, draft: MessageDraft)
+    fun clearDraft(conversationId: String)
 }
 
 /** Device-local conversation store for the native prototype. */
@@ -358,6 +362,35 @@ object DemoMessagingRepository : MessagingRepository {
         return conversation
     }
 
+    override fun getDraft(conversationId: String): MessageDraft {
+        val raw = preferences?.getString("$DRAFT_PREFIX$conversationId", null) ?: return MessageDraft()
+        val json = runCatching { JSONObject(raw) }.getOrNull() ?: return MessageDraft()
+        return MessageDraft(
+            text = json.optString("text"),
+            replyToMessageId = json.optString("replyToMessageId")
+                .takeUnless { it.isBlank() || it == "null" },
+            replyToText = json.optString("replyToText")
+                .takeUnless { it.isBlank() || it == "null" },
+        )
+    }
+
+    override fun saveDraft(conversationId: String, draft: MessageDraft) {
+        val key = "$DRAFT_PREFIX$conversationId"
+        if (draft.text.isBlank() && draft.replyToMessageId == null && draft.replyToText.isNullOrBlank()) {
+            preferences?.edit()?.remove(key)?.apply()
+            return
+        }
+        val json = JSONObject()
+            .put("text", draft.text)
+            .put("replyToMessageId", draft.replyToMessageId ?: JSONObject.NULL)
+            .put("replyToText", draft.replyToText ?: JSONObject.NULL)
+        preferences?.edit()?.putString(key, json.toString())?.apply()
+    }
+
+    override fun clearDraft(conversationId: String) {
+        preferences?.edit()?.remove("$DRAFT_PREFIX$conversationId")?.apply()
+    }
+
     override fun setPinnedMessage(conversationId: String, messageId: String?) {
         val conversationIndex = mutableConversations.indexOfFirst { it.id == conversationId }
         require(conversationIndex >= 0) { "Conversation not found." }
@@ -508,4 +541,5 @@ object DemoMessagingRepository : MessagingRepository {
 
     private const val PREFS_NAME = "snail_local_messages"
     private const val KEY_CONVERSATIONS = "conversations_json"
+    private const val DRAFT_PREFIX = "draft_"
 }

@@ -126,6 +126,7 @@ import com.example.snailmesssenger.core.designsystem.Spacing
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.ConversationKind
 import com.example.snailmesssenger.data.model.Message
+import com.example.snailmesssenger.data.model.MessageDraft
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
 import com.example.snailmesssenger.feature.theme.LocalChatTextSize
@@ -182,7 +183,9 @@ fun ChatScreen(
         return
     }
 
-    var inputText by remember { mutableStateOf("") }
+    var inputText by remember(conversationId) {
+        mutableStateOf(DemoMessagingRepository.getDraft(conversationId).text)
+    }
     var messages by remember(conversationId) { mutableStateOf(conversation.messages) }
     var showProfileSheet by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
@@ -204,7 +207,20 @@ fun ChatScreen(
     var selectedMessage by remember { mutableStateOf<Message?>(null) }
     var forwardingMessage by remember { mutableStateOf<Message?>(null) }
     var editingMessageId by remember { mutableStateOf<String?>(null) }
-    var replyTarget by remember { mutableStateOf<Message?>(null) }
+    var replyTarget by remember(conversationId) {
+        val draft = DemoMessagingRepository.getDraft(conversationId)
+        mutableStateOf(
+            draft.replyToMessageId?.let { id -> conversation.messages.firstOrNull { it.id == id } }
+                ?: draft.replyToText?.let { quotedText ->
+                    Message(
+                        id = "draft-reply",
+                        senderId = conversation.peer.id,
+                        text = quotedText,
+                        timestampMs = 0L,
+                    )
+                },
+        )
+    }
     var isRecordingVoice by remember { mutableStateOf(false) }
     var recordingSeconds by remember { mutableStateOf(0) }
     var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
@@ -338,6 +354,19 @@ fun ChatScreen(
         queuePickedAttachments(uris)
     }
 
+    LaunchedEffect(inputText, replyTarget?.id, replyTarget?.text, editingMessageId, conversationId) {
+        if (editingMessageId != null) return@LaunchedEffect
+        delay(350)
+        DemoMessagingRepository.saveDraft(
+            conversationId,
+            MessageDraft(
+                text = inputText,
+                replyToMessageId = replyTarget?.id?.takeUnless { it == "draft-reply" },
+                replyToText = replyTarget?.text,
+            ),
+        )
+    }
+
     LaunchedEffect(conversation.messages) {
         messages = conversation.messages
     }
@@ -381,6 +410,7 @@ fun ChatScreen(
             )
         }
         messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+        DemoMessagingRepository.clearDraft(conversationId)
         inputText = ""
         replyTarget = null
         showEmojiPicker = false
