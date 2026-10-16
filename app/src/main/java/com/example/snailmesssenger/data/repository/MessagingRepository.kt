@@ -42,6 +42,7 @@ interface MessagingRepository {
     fun clearConversationHistory(conversationId: String)
     fun setPinnedMessage(conversationId: String, messageId: String?)
     fun getOrCreateSavedMessages(): Conversation
+    fun updateConversationMembers(conversationId: String, memberIds: List<String>)
     fun getDraft(conversationId: String): MessageDraft
     fun saveDraft(conversationId: String, draft: MessageDraft)
     fun clearDraft(conversationId: String)
@@ -361,6 +362,27 @@ object DemoMessagingRepository : MessagingRepository {
         publishChanges()
         persistConversations()
         return conversation
+    }
+
+    override fun updateConversationMembers(conversationId: String, memberIds: List<String>) {
+        val conversationIndex = mutableConversations.indexOfFirst { it.id == conversationId }
+        require(conversationIndex >= 0) { "Conversation not found." }
+        val existing = mutableConversations[conversationIndex]
+        require(existing.kind == ConversationKind.GROUP || existing.kind == ConversationKind.CHANNEL) {
+            "Only groups and channels have editable members."
+        }
+        val directory = (MockData.discoverableContacts + MockData.conversations.map { it.peer })
+            .distinctBy { it.id }
+        val uniqueIds = memberIds.filterNot { it == "me" }.distinct()
+        require(uniqueIds.all { id -> directory.any { it.id == id } }) {
+            "One or more selected members could not be found."
+        }
+        require(uniqueIds.isNotEmpty()) { "Keep at least one member or subscriber." }
+        mutableConversations[conversationIndex] = existing.copy(
+            participantIds = listOf("me") + uniqueIds,
+        )
+        publishChanges()
+        persistConversations()
     }
 
     override fun getOrCreateSavedMessages(): Conversation {

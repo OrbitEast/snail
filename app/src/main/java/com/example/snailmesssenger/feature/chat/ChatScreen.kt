@@ -125,7 +125,9 @@ import com.example.snailmesssenger.core.designsystem.SnailAvatar
 import com.example.snailmesssenger.core.designsystem.Spacing
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.ConversationKind
+import com.example.snailmesssenger.data.model.MockData
 import com.example.snailmesssenger.data.model.Message
+import com.example.snailmesssenger.data.model.User
 import com.example.snailmesssenger.data.model.MessageDraft
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
@@ -188,6 +190,8 @@ fun ChatScreen(
     }
     var messages by remember(conversationId) { mutableStateOf(conversation.messages) }
     var showProfileSheet by remember { mutableStateOf(false) }
+    var showManageMembers by remember { mutableStateOf(false) }
+    var managedMemberIds by remember(conversationId) { mutableStateOf(emptySet<String>()) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showClearHistoryConfirm by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
@@ -1101,6 +1105,73 @@ fun ChatScreen(
         )
     }
 
+    if (showManageMembers) {
+        val memberDirectory = (MockData.discoverableContacts + MockData.conversations.map { it.peer })
+            .distinctBy { it.id }
+        val groupLabel = if (conversation.kind == ConversationKind.CHANNEL) "subscribers" else "members"
+        AlertDialog(
+            onDismissRequest = { showManageMembers = false },
+            title = { Text(if (conversation.kind == ConversationKind.CHANNEL) "Manage subscribers" else "Manage members") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 430.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        "Changes are saved on this device only.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
+                        items(memberDirectory, key = { it.id }) { user ->
+                            val checked = user.id in managedMemberIds
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    managedMemberIds = if (checked) managedMemberIds - user.id
+                                        else managedMemberIds + user.id
+                                }.padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                androidx.compose.material3.Checkbox(
+                                    checked = checked,
+                                    onCheckedChange = { enabled ->
+                                        managedMemberIds = if (enabled) managedMemberIds + user.id
+                                            else managedMemberIds - user.id
+                                    },
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(user.displayName, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        "@${user.username}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        "${managedMemberIds.size} $groupLabel selected",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = managedMemberIds.isNotEmpty(),
+                    onClick = {
+                        DemoMessagingRepository.updateConversationMembers(conversationId, managedMemberIds.toList())
+                        showManageMembers = false
+                    },
+                ) { Text("Save members") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showManageMembers = false }) { Text("Cancel") }
+            },
+        )
+    }
+
     if (showClearHistoryConfirm) {
         AlertDialog(
             onDismissRequest = { showClearHistoryConfirm = false },
@@ -1328,10 +1399,20 @@ fun ChatScreen(
     }
 
     if (showProfileSheet) {
+        val memberDirectory = (MockData.discoverableContacts + MockData.conversations.map { it.peer })
+            .distinctBy { it.id }
+        val profileMembers = conversation.participantIds
+            .filterNot { it == "me" }
+            .mapNotNull { id -> memberDirectory.firstOrNull { it.id == id } }
         PeerProfileSheet(
             peer = conversation.peer,
             kind = conversation.kind,
             memberCount = if (conversation.participantIds.isEmpty()) 1 else conversation.participantIds.size,
+            members = profileMembers,
+            onManageMembers = {
+                managedMemberIds = profileMembers.map { it.id }.toSet()
+                showManageMembers = true
+            },
             isMuted = conversation.isMuted,
             onToggleMute = {
                 DemoMessagingRepository.setConversationMuted(conversation.id, !conversation.isMuted)

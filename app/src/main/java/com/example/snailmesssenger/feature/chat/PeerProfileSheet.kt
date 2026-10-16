@@ -24,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -42,6 +43,8 @@ fun PeerProfileSheet(
     peer: User,
     kind: ConversationKind = ConversationKind.DIRECT,
     memberCount: Int = 1,
+    members: List<User> = emptyList(),
+    onManageMembers: () -> Unit = {},
     isMuted: Boolean = false,
     onToggleMute: () -> Unit = {},
     onDismiss: () -> Unit,
@@ -168,6 +171,34 @@ fun PeerProfileSheet(
                 },
                 icon = Icons.Default.Block,
             )
+            if (kind != ConversationKind.DIRECT) {
+                Spacer(Modifier.height(Spacing.md))
+                SnailSectionHeading(
+                    text = if (kind == ConversationKind.CHANNEL) "Subscribers" else "Members",
+                )
+                if (members.isEmpty()) {
+                    Text(
+                        "No members selected.",
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.sm),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                } else {
+                    members.forEach { member ->
+                        SnailSectionRow(
+                            title = member.displayName,
+                            subtitle = "@${member.username}",
+                            icon = null,
+                        )
+                    }
+                }
+                TextButton(
+                    onClick = onManageMembers,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+                ) {
+                    Text(if (kind == ConversationKind.CHANNEL) "Manage subscribers" else "Manage members")
+                }
+            }
         }
     }
 }
