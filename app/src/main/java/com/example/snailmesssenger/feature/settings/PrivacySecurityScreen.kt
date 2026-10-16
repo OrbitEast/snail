@@ -49,13 +49,17 @@ import com.example.snailmesssenger.feature.security.SecurityViewModel
 import com.example.snailmesssenger.data.model.MockData
 import com.example.snailmesssenger.data.model.User
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
+import com.example.snailmesssenger.feature.security.AppLockManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewModel = viewModel()) {
     var lastSeenOption by remember { mutableStateOf("My Contacts") }
     var photoOption by remember { mutableStateOf("Everybody") }
-    var passcodeEnabled by remember { mutableStateOf(false) }
+    val appLockState by AppLockManager.state.collectAsState()
+    var showAppLockPinDialog by remember { mutableStateOf(false) }
+    var appLockPin by remember { mutableStateOf("") }
+    var appLockDialogMode by remember { mutableStateOf("enable") }
     var unsupportedFeature by remember { mutableStateOf<String?>(null) }
     var showBlockedUsersDialog by remember { mutableStateOf(false) }
     val blockedUserIds by DemoMessagingRepository.blockedUserIdsFlow.collectAsState()
@@ -87,7 +91,25 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
             Spacer(Modifier.height(Spacing.xl))
             SnailSectionHeading("Security")
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow(title = "Passcode Lock", subtitle = if (passcodeEnabled) "Enabled" else "Disabled", icon = Icons.Default.Lock, onClick = { passcodeEnabled = !passcodeEnabled })
+            SnailSectionRow(
+                title = "Passcode Lock",
+                subtitle = if (appLockState.enabled) "Enabled · auto-locks after 30 seconds away" else "Disabled · set a 4–8 digit PIN",
+                icon = Icons.Default.Lock,
+                onClick = {
+                    AppLockManager.clearMessage()
+                    appLockPin = ""
+                    appLockDialogMode = if (appLockState.enabled) "disable" else "enable"
+                    showAppLockPinDialog = true
+                },
+            )
+            if (appLockState.enabled) {
+                SnailSectionRow(
+                    title = "Lock App Now",
+                    subtitle = "Require passcode immediately",
+                    icon = Icons.Default.Lock,
+                    onClick = { AppLockManager.lockNow() },
+                )
+            }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
 
             androidx.compose.foundation.layout.Row(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp)) {
@@ -152,6 +174,76 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
             },
             confirmButton = {
                 TextButton(onClick = { showBlockedUsersDialog = false }) { Text("Done") }
+            },
+        )
+    }
+
+    if (showAppLockPinDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showAppLockPinDialog = false
+                appLockPin = ""
+                AppLockManager.clearMessage()
+            },
+            title = { Text(if (appLockDialogMode == "enable") "Set App Passcode" else "Disable App Passcode") },
+            text = {
+                Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        if (appLockDialogMode == "enable") {
+                            "Choose a 4–8 digit passcode. SNAIL locks when you leave it for 30 seconds or lock it manually."
+                        } else {
+                            "Enter your current passcode to disable the app lock."
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    OutlinedTextField(
+                        value = appLockPin,
+                        onValueChange = {
+                            if (it.length <= 8 && it.all(Char::isDigit)) {
+                                appLockPin = it
+                                AppLockManager.clearMessage()
+                            }
+                        },
+                        label = { Text("4–8 digit PIN") },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = PasswordVisualTransformation(),
+                        isError = appLockState.message != null,
+                    )
+                    appLockState.message?.let { error ->
+                        Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text(
+                        "Only a salted PIN hash is stored. Forgetting it cannot be recovered by the SNAIL prototype.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = appLockPin.length in 4..8,
+                    onClick = {
+                        val successful = if (appLockDialogMode == "enable") {
+                            AppLockManager.enableWithPin(appLockPin)
+                        } else {
+                            AppLockManager.disableWithPin(appLockPin)
+                        }
+                        if (successful) {
+                            showAppLockPinDialog = false
+                            appLockPin = ""
+                            AppLockManager.clearMessage()
+                        }
+                    },
+                ) { Text(if (appLockDialogMode == "enable") "Enable lock" else "Disable lock") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAppLockPinDialog = false
+                    appLockPin = ""
+                    AppLockManager.clearMessage()
+                }) { Text("Cancel") }
             },
         )
     }

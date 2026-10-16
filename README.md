@@ -11,7 +11,8 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 - Opening a chat clears its local unread count. Chat overflow supports persistent pin/mute, plain-text export via Android Sharesheet, and confirmed local history clearing. Individual message deletion also requires confirmation and clears stale pinned-message references.
 - Block/unblock contacts locally from profiles; blocked IDs are encrypted in the active account store and prevent sending messages, polls, or attachments to that direct chat on this device.
 - The signed-in local demo account is restored after app restart; local conversations and drafts are isolated by account, and logout clears that session.
-- Conversation JSON, drafts, and scheduled message payloads are encrypted at rest with an Android Keystore AES-GCM key; Android app-data backup is disabled. This is not end-to-end encryption.
+- Conversation JSON, drafts, scheduled message payloads, and the blocked-user list are encrypted at rest with an Android Keystore AES-GCM key; Android app-data backup is disabled.
+- An optional device-local app passcode is salted/PBKDF2-hashed, supports a 30-second background timeout and manual lock, and rate-limits repeated incorrect attempts. This is an app UI lock, not end-to-end encryption.
 - Select up to 10 photos/videos or documents per composer action, add a caption before sending, tap images for full-screen preview, or open video/files/audio in another installed app.
 - Record voice-message audio locally with a microphone permission prompt, a live duration counter, and a dedicated in-app private-storage file URI.
 - Invite links can be shared through Android's system Sharesheet.
