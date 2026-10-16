@@ -45,7 +45,6 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import com.example.snailmesssenger.core.designsystem.DarkBubbleIn
@@ -57,7 +56,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,7 +65,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -92,9 +89,6 @@ import com.example.snailmesssenger.core.designsystem.Spacing
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.snailmesssenger.feature.media.AttachmentViewModel
-import com.example.snailmesssenger.feature.media.SnailAttachmentBottomSheet
 import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
 import com.example.snailmesssenger.feature.theme.LocalChatTextSize
 import com.example.snailmesssenger.feature.theme.LocalSnailThemeState
@@ -111,8 +105,6 @@ fun ChatScreen(
     onVoiceCall: () -> Unit = {},
     onVideoCall: () -> Unit = {},
 ) {
-    val attachmentViewModel: AttachmentViewModel = viewModel(key = "attachments-$conversationId")
-    val attachmentState by attachmentViewModel.uiState.collectAsState()
     val themeState = LocalSnailThemeState.current
     val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
     val conversation = conversations.firstOrNull { it.id == conversationId }
@@ -413,12 +405,6 @@ fun ChatScreen(
                         verticalAlignment = Alignment.Bottom,
                     ) {
                         IconButton(
-                            onClick = { attachmentViewModel.showSheet() },
-                            modifier = Modifier.size(38.dp),
-                        ) {
-                            Icon(Icons.Default.AttachFile, contentDescription = "Attach media", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        IconButton(
                             onClick = { showEmojiPicker = !showEmojiPicker },
                             modifier = Modifier.size(42.dp),
                         ) {
@@ -551,30 +537,6 @@ fun ChatScreen(
         }
     }
 
-    if (attachmentState.isSheetVisible) {
-        SnailAttachmentBottomSheet(
-            state = attachmentState,
-            onDismiss = attachmentViewModel::hideSheet,
-            onShortcut = attachmentViewModel::setShortcut,
-            onToggleMedia = attachmentViewModel::toggleSelection,
-            onPreview = attachmentViewModel::openPreview,
-        )
-    }
-    if (attachmentState.isPreviewVisible) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = attachmentViewModel::closePreview,
-            title = { Text("Media preview") },
-            text = { Text("Selected media is ready for the local demo. Network upload is not configured.") },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    attachmentViewModel.sendSelected { _, _, _, _ -> }
-                }) { Text("Done") }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = attachmentViewModel::closePreview) { Text("Back") }
-            },
-        )
-    }
     if (showProfileSheet) {
         PeerProfileSheet(
             peer = conversation.peer,
