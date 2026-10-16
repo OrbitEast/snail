@@ -1,5 +1,11 @@
 package com.example.snailmesssenger.feature.profile
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,76 +59,87 @@ fun ProfileScreen(
     var user by remember { mutableStateOf(DemoAuthRepository.currentUser) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize().statusBarsPadding(),
-        topBar = {
-            TopAppBar(
-                title = { Text("Profile", style = MaterialTheme.typography.titleLarge) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+    AnimatedContent(
+        targetState = Unit,
+        transitionSpec = {
+            (fadeIn(com.example.snailmesssenger.core.designsystem.SnailMotion.SpringSpec) +
+                scaleIn(initialScale = 0.97f, animationSpec = com.example.snailmesssenger.core.designsystem.SnailMotion.SpringSpec)) togetherWith
+                (fadeOut(com.example.snailmesssenger.core.designsystem.SnailMotion.QuickSpringSpec) +
+                    scaleOut(targetScale = 0.97f, animationSpec = com.example.snailmesssenger.core.designsystem.SnailMotion.QuickSpringSpec))
         },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(Modifier.height(Spacing.xxl))
-            SnailAvatar(
-                displayId = user?.id ?: "me",
-                displayName = user?.displayName ?: "You",
-                size = 96,
-            )
-            Spacer(Modifier.height(Spacing.lg))
-            Text(
-                text = user?.displayName ?: "You",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Spacer(Modifier.height(Spacing.xs))
-            Text(
-                text = "@${user?.username ?: "you"}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (user?.bio?.isNotBlank() == true) {
-                Spacer(Modifier.height(Spacing.sm))
+        label = "profile-entry-motion",
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+            topBar = {
+                TopAppBar(
+                    title = { Text("Profile", style = MaterialTheme.typography.titleLarge) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                )
+            },
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(Spacing.xxl))
+                SnailAvatar(
+                    displayId = user?.id ?: "me",
+                    displayName = user?.displayName ?: "You",
+                    size = 96,
+                )
+                Spacer(Modifier.height(Spacing.lg))
                 Text(
-                    text = user!!.bio,
+                    text = user?.displayName ?: "You",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = "@${user?.username ?: "you"}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (user?.bio?.isNotBlank() == true) {
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(
+                        text = user!!.bio,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Spacer(Modifier.height(Spacing.xxl))
+                SnailPrimaryButton(
+                    text = "Edit profile",
+                    onClick = { showEditDialog = true },
+                    modifier = Modifier.padding(horizontal = Spacing.pageHorizontal),
+                )
+
+                Spacer(Modifier.height(Spacing.xxxl))
+                SnailSectionHeading(text = "Account")
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                SnailSectionRow(
+                    title = "Settings",
+                    icon = Icons.Default.Settings,
+                    onClick = onOpenSettings,
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                SnailSectionRow(
+                    title = "Log out",
+                    icon = Icons.AutoMirrored.Filled.Logout,
+                    onClick = { showLogoutDialog = true },
+                    destructive = true,
+                )
+                Spacer(Modifier.height(Spacing.xxxl))
             }
-
-            Spacer(Modifier.height(Spacing.xxl))
-            SnailPrimaryButton(
-                text = "Edit profile",
-                onClick = { showEditDialog = true },
-                modifier = Modifier.padding(horizontal = Spacing.pageHorizontal),
-            )
-
-            Spacer(Modifier.height(Spacing.xxxl))
-            SnailSectionHeading(text = "Account")
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow(
-                title = "Settings",
-                icon = Icons.Default.Settings,
-                onClick = onOpenSettings,
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow(
-                title = "Log out",
-                icon = Icons.AutoMirrored.Filled.Logout,
-                onClick = { showLogoutDialog = true },
-                destructive = true,
-            )
-            Spacer(Modifier.height(Spacing.xxxl))
         }
     }
 
