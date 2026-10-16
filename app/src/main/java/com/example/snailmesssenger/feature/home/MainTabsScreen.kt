@@ -79,7 +79,7 @@ fun MainTabsScreen(
     onOpenChatSettings: () -> Unit = onOpenAppearance,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    var showCalls by remember { mutableStateOf(false) }
+    var showQuickMenu by remember { mutableStateOf(false) }
     val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
     val unreadCount = conversations.sumOf { it.unreadCount }
 
@@ -108,7 +108,7 @@ fun MainTabsScreen(
         ) { tab ->
             when (tab) {
                 0 -> ChatListScreen(
-                    onOpenMenu = { showCalls = true },
+                    onOpenMenu = { showQuickMenu = true },
                     onOpenChat = onOpenChat,
                     onNewChat = onFindPeople,
                 )
@@ -147,12 +147,27 @@ fun MainTabsScreen(
         )
     }
 
-    if (showCalls) {
+    if (showQuickMenu) {
         AlertDialog(
-            onDismissRequest = { showCalls = false },
-            title = { Text("Calls") },
-            text = { Text("Call history\n\nNo calls yet. Incoming, outgoing and missed call indicators are ready for the local call layer.") },
-            confirmButton = { TextButton(onClick = { showCalls = false }) { Text("Done") } },
+            onDismissRequest = { showQuickMenu = false },
+            title = { Text("Quick navigation") },
+            text = { Text("Jump to another section of SNAIL.") },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = { showQuickMenu = false; selectedTab = 1 }) {
+                        Text("Contacts")
+                    }
+                    TextButton(onClick = { showQuickMenu = false; selectedTab = 2 }) {
+                        Text("Settings")
+                    }
+                    TextButton(onClick = { showQuickMenu = false; selectedTab = 3 }) {
+                        Text("Profile")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQuickMenu = false }) { Text("Close") }
+            },
         )
     }
 }
