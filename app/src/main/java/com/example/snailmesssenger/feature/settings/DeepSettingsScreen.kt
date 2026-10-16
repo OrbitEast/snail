@@ -79,14 +79,10 @@ fun DeepSettingsScreen(
             item { ToggleRow(Icons.Default.Fingerprint, "Passcode Lock / Fingerprint", "Protect Snail on this device", state.fingerprintLock, viewModel::setFingerprintLock) }
             item { RowItem(Icons.Default.Lock, "Two-Step Verification", if (state.twoStepEnabled) "Enabled" else "Not enabled") { viewModel.setTwoStepEnabled(!state.twoStepEnabled) } }
             item { RowItem(Icons.Default.Devices, "Active Sessions", "Mobile • Desktop • Web", onOpenPrivacySecurity) }
-            item { RowItem(Icons.Default.Security, "Phone Number", "My Contacts") {} }
-            item { RowItem(Icons.Default.Security, "Last Seen & Online", "Everybody") {} }
-            item { RowItem(Icons.Default.Security, "Profile Photos", "Everybody") {} }
-            item { RowItem(Icons.Default.Security, "Voice Messages", "Everybody") {} }
+            item { RowItem(Icons.Default.Security, "Last Seen & Online", "Visibility preferences", onOpenPrivacySecurity) }
 
             item { Section("Data and Storage") }
             item { StorageCard(state.cacheProgress) }
-            item { RowItem(Icons.Default.Storage, "Storage Usage", "Photos 1.2 GB • Videos 640 MB • Files 180 MB • Cache 96 MB", onOpenDataStorage) }
             item {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Button(onClick = viewModel::startClearCache, enabled = !state.isClearingCache) {
@@ -95,13 +91,10 @@ fun DeepSettingsScreen(
                     if (state.isClearingCache) LinearProgressIndicator(progress = { state.cacheProgress }, Modifier.weight(1f).padding(start = 12.dp))
                 }
             }
-            item { ToggleRow(Icons.Default.Storage, "Automatic Media Download — Mobile Data", "Photos and files", state.mobileDataDownloads, viewModel::setMobileDataDownloads) }
-            item { ToggleRow(Icons.Default.Storage, "Automatic Media Download — Wi-Fi", "Photos, videos and files", state.wifiDownloads, viewModel::setWifiDownloads) }
 
             item { Section("Notifications and Sounds") }
             item { ToggleRow(Icons.Default.Notifications, "Private Chats Notifications", "One-to-one chat alerts", state.privateChatNotifications, viewModel::setPrivateChatNotifications) }
             item { RowItem(Icons.Default.Notifications, "Custom Ringtone", "Default Snail tone", onOpenNotifications) }
-            item { ToggleRow(Icons.Default.Notifications, "Groups & Channels Notifications", "Group message alerts", state.groupNotifications, viewModel::setGroupNotifications) }
             item { ToggleRow(Icons.Default.Notifications, "Include Muted Chats", "Badge counter", state.includeMutedChats, viewModel::setIncludeMutedChats) }
             item { ToggleRow(Icons.Default.Notifications, "Count Unread Messages", "App icon badge", state.countUnreadMessages, viewModel::setCountUnreadMessages) }
 
