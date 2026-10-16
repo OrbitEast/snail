@@ -14,7 +14,7 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 - Record voice-message audio locally with a microphone permission prompt, a live duration counter, and a dedicated in-app private-storage file URI.
 - Invite links can be shared through Android's system Sharesheet.
 - Local message/attachment metadata persistence, adjustable chat wallpaper, light/dark modes, and responsive navigation.
-- Scheduled messages use persistent Android WorkManager jobs and are appended to this device's local conversation at the due time; they are not delivered to a remote recipient. Android power-saving can delay execution.
+- Scheduled messages use persistent Android WorkManager jobs and are appended to the matching account's local conversation at the due time; they are not delivered to a remote recipient and are discarded if that account is no longer the active local session. Android power-saving can delay execution.
 - Voice/video call screens remain prototypes and do not establish real network calls. Voice messages are recorded and stored locally; they are not uploaded or delivered to another user.
 
 ## Important limitations

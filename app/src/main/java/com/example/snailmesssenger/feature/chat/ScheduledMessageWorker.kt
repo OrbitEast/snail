@@ -32,12 +32,15 @@ class ScheduledMessageWorker(
         val conversationId = inputData.getString(KEY_CONVERSATION_ID) ?: return Result.failure()
         val text = inputData.getString(KEY_TEXT)?.trim().orEmpty()
         val scheduledId = inputData.getString(KEY_SCHEDULED_ID) ?: id.toString()
+        val scheduledAccountId = inputData.getString(KEY_ACCOUNT_ID) ?: "guest"
         val replyToMessageId = inputData.getString(KEY_REPLY_TO_MESSAGE_ID)
         val replyToText = inputData.getString(KEY_REPLY_TO_TEXT)
         if (text.isBlank()) return Result.failure()
 
         return try {
             DemoAuthRepository.initialize(applicationContext)
+            val activeAccountId = DemoAuthRepository.currentUser?.id ?: "guest"
+            if (activeAccountId != scheduledAccountId) return Result.failure()
             DemoMessagingRepository.initialize(applicationContext, DemoAuthRepository.currentUser?.id)
             DemoMessagingRepository.sendScheduledMessage(
                 conversationId = conversationId,
@@ -60,6 +63,7 @@ class ScheduledMessageWorker(
         private const val KEY_TEXT = "text"
         private const val KEY_SCHEDULED_ID = "scheduled_id"
         private const val KEY_SCHEDULED_AT = "scheduled_at"
+        private const val KEY_ACCOUNT_ID = "account_id"
         private const val KEY_REPLY_TO_MESSAGE_ID = "reply_to_message_id"
         private const val KEY_REPLY_TO_TEXT = "reply_to_text"
 
@@ -82,6 +86,7 @@ class ScheduledMessageWorker(
                 KEY_TEXT to normalizedText,
                 KEY_SCHEDULED_ID to scheduledId,
                 KEY_SCHEDULED_AT to scheduledAtMs,
+                KEY_ACCOUNT_ID to (DemoAuthRepository.currentUser?.id ?: "guest"),
                 KEY_REPLY_TO_MESSAGE_ID to replyToMessageId,
                 KEY_REPLY_TO_TEXT to replyToText?.take(2_000),
             )
@@ -107,6 +112,9 @@ class ScheduledMessageWorker(
                     val data: Data = info.inputData
                     val targetConversationId = data.getString(KEY_CONVERSATION_ID) ?: return@mapNotNull null
                     if (targetConversationId != conversationId) return@mapNotNull null
+                    val requestAccountId = data.getString(KEY_ACCOUNT_ID) ?: "guest"
+                    val currentAccountId = DemoAuthRepository.currentUser?.id ?: "guest"
+                    if (requestAccountId != currentAccountId) return@mapNotNull null
                     val text = data.getString(KEY_TEXT) ?: return@mapNotNull null
                     val scheduledId = data.getString(KEY_SCHEDULED_ID) ?: info.id.toString()
                     val scheduledAt = data.getLong(KEY_SCHEDULED_AT, 0L)
