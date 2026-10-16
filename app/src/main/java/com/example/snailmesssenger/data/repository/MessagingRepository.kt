@@ -83,7 +83,7 @@ object DemoMessagingRepository : MessagingRepository {
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
         require(index >= 0) { "Conversation not found." }
         val message = Message(
-            id = "m${System.currentTimeMillis()}",
+            id = "m${java.util.UUID.randomUUID()}",
             senderId = Message.ME_ID,
             text = normalizedText,
             timestampMs = System.currentTimeMillis(),
@@ -347,7 +347,7 @@ object DemoMessagingRepository : MessagingRepository {
             ?: MockData.discoverableContacts.firstOrNull { it.id == peerId }
             ?: throw IllegalArgumentException("Peer not found.")
         val conversation = Conversation(
-            id = "c${System.currentTimeMillis()}",
+            id = "c${java.util.UUID.randomUUID()}",
             peer = peer.copy(isOnline = false),
         )
         mutableConversations.add(0, conversation)

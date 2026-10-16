@@ -297,9 +297,9 @@ fun ChatScreen(
     }
 
     val mediaPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-    ) { uri ->
-        if (uri != null) {
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
+    ) { uris ->
+        uris.take(10).forEach { uri ->
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
@@ -310,13 +310,15 @@ fun ChatScreen(
                 mimeType = mimeType,
                 name = resolveDisplayName(context, uri),
             )
+        }
+        if (uris.isNotEmpty()) {
             messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
         }
     }
     val filePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
+        contract = ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        uris.take(10).forEach { uri ->
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
@@ -327,6 +329,8 @@ fun ChatScreen(
                 mimeType = mimeType,
                 name = resolveDisplayName(context, uri),
             )
+        }
+        if (uris.isNotEmpty()) {
             messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
         }
     }
