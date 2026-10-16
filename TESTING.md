@@ -6,6 +6,7 @@
 - [ ] Register two local demo accounts and verify duplicate usernames are rejected.
 - [ ] Inspect app preferences: conversation JSON, drafts and blocklist should begin with the SNAIL encrypted-payload prefix, and Android backup should be disabled.
 - [ ] Enable app passcode, lock immediately, verify incorrect PINs are rate-limited, unlock with the correct PIN, and verify backgrounding for over 30 seconds triggers the lock.
+- [ ] Enable the local verification PIN, check that only a salt/hash is stored (not the PIN), verify correct/incorrect PINs, and confirm recovery code storage is encrypted.
 - [ ] Sign in/out and confirm local account persistence.
 - [ ] Register two different local accounts, add different messages/drafts in each, switch accounts, and verify one account never sees the other's local conversations or drafts.
 - [ ] Upgrade once from the previous shared-store version and verify legacy data is migrated only into the first active account, then removed from the legacy preference file.
