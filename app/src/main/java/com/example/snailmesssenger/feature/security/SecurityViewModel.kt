@@ -184,7 +184,9 @@ class SecurityViewModel(application: Application) : AndroidViewModel(application
 
     fun resetWithCode(code: String, newPin: String): Boolean {
         val stored = prefs.getString(KEY_RESET_CODE, null)
-        val decoded = stored?.let { runCatching { LocalVault.decrypt(it) }.getOrElse { it } }
+        val decoded = stored?.let { storedValue ->
+            runCatching { LocalVault.decrypt(storedValue) }.getOrDefault(storedValue)
+        }
         val validCode = decoded != null && MessageDigest.isEqual(
             code.toByteArray(Charsets.UTF_8),
             decoded.toByteArray(Charsets.UTF_8),
