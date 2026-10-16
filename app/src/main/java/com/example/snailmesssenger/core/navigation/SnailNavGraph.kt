@@ -14,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.snailmesssenger.data.preferences.UserPreferences
+import com.example.snailmesssenger.data.repository.DemoAuthRepository
 import com.example.snailmesssenger.feature.auth.LoginScreen
 import com.example.snailmesssenger.feature.auth.RegisterScreen
 import com.example.snailmesssenger.feature.auth.WelcomeScreen
@@ -70,7 +71,7 @@ fun SnailNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = SnailRoute.WELCOME,
+        startDestination = if (DemoAuthRepository.currentUser != null) SnailRoute.HOME else SnailRoute.WELCOME,
         enterTransition = { enterTransition },
         exitTransition = { exitTransition },
         popEnterTransition = { popEnterTransition },

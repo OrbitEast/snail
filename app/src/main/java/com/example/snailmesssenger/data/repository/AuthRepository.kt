@@ -48,29 +48,34 @@ object DemoAuthRepository : AuthRepository {
         if (preferences != null) return
         val store = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         preferences = store
-        val saved = store.getString(KEY_ACCOUNTS, null) ?: return
-        val root = runCatching { JSONObject(saved) }.getOrNull() ?: return
-        val keys = root.keys()
-        while (keys.hasNext()) {
-            val username = keys.next()
-            val entry = root.optJSONObject(username) ?: continue
-            val salt = entry.optString("salt")
-            val passwordHash = entry.optString("passwordHash")
-            if (salt.isBlank() || passwordHash.isBlank()) continue
-            val user = User(
-                id = entry.optString("id", "u_${username.hashCode().toUInt()}"),
-                username = username,
-                displayName = entry.optString("displayName", username),
-                bio = entry.optString("bio", ""),
-                isOnline = false,
-            )
-            accounts[username] = AccountRecord(user, salt, passwordHash)
+        val saved = store.getString(KEY_ACCOUNTS, null)
+        val root = saved?.let { runCatching { JSONObject(it) }.getOrNull() }
+        if (root != null) {
+            val keys = root.keys()
+            while (keys.hasNext()) {
+                val username = keys.next()
+                val entry = root.optJSONObject(username) ?: continue
+                val salt = entry.optString("salt")
+                val passwordHash = entry.optString("passwordHash")
+                if (salt.isBlank() || passwordHash.isBlank()) continue
+                val user = User(
+                    id = entry.optString("id", "u_${username.hashCode().toUInt()}"),
+                    username = username,
+                    displayName = entry.optString("displayName", username),
+                    bio = entry.optString("bio", ""),
+                    isOnline = false,
+                )
+                accounts[username] = AccountRecord(user, salt, passwordHash)
+            }
         }
+        currentUser = store.getString(KEY_ACTIVE_USER, null)
+            ?.let { activeUsername -> accounts[activeUsername]?.user?.copy(isOnline = false) }
     }
 
     override fun updateUser(updated: User) {
         val safeUser = updated.copy(isOnline = false)
         currentUser = safeUser
+        preferences?.edit()?.putString(KEY_ACTIVE_USER, safeUser.username)?.apply()
         val existing = accounts[safeUser.username] ?: return
         accounts[safeUser.username] = existing.copy(user = safeUser)
         persistAccounts()
@@ -99,6 +104,7 @@ object DemoAuthRepository : AuthRepository {
         )
         accounts[trimmed] = AccountRecord(user, salt, hash)
         currentUser = user
+        preferences?.edit()?.putString(KEY_ACTIVE_USER, trimmed)?.apply()
         persistAccounts()
         return user
     }
@@ -120,11 +126,13 @@ object DemoAuthRepository : AuthRepository {
         }
         val safeUser = account.user.copy(isOnline = false)
         currentUser = safeUser
+        preferences?.edit()?.putString(KEY_ACTIVE_USER, trimmed)?.apply()
         return safeUser
     }
 
     override fun logout() {
         currentUser = null
+        preferences?.edit()?.remove(KEY_ACTIVE_USER)?.apply()
     }
 
     private fun derivePasswordHash(password: String, salt: ByteArray): ByteArray {
@@ -154,6 +162,7 @@ object DemoAuthRepository : AuthRepository {
 
     private const val PREFS_NAME = "snail_local_accounts"
     private const val KEY_ACCOUNTS = "accounts_json"
+    private const val KEY_ACTIVE_USER = "active_username"
     private const val PBKDF2_ITERATIONS = 120_000
     private const val HASH_BITS = 256
 }
