@@ -33,6 +33,7 @@ data class Message(
     val isEdited: Boolean = false,
     val replyToMessageId: String? = null,
     val replyToText: String? = null,
+    val isForwarded: Boolean = false,
 ) {
     val isOutgoing: Boolean get() = senderId == ME_ID
 

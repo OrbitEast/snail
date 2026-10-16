@@ -1,5 +1,6 @@
 package com.example.snailmesssenger.feature.home
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -28,9 +30,10 @@ fun ContactRowItem(
     contact: SearchContact,
     query: String = "",
     onOpen: (SearchContact) -> Unit = {},
-    onInvite: (SearchContact) -> Unit = {},
+    onInvite: ((SearchContact) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -84,7 +87,20 @@ fun ContactRowItem(
             )
         } else {
             Button(
-                onClick = { onInvite(contact) },
+                onClick = {
+                    val customInvite = onInvite
+                    if (customInvite != null) {
+                        customInvite(contact)
+                    } else {
+                        val inviteText = "Join me on SNAIL Messenger — private conversations with your username. Find me as @${contact.username.removePrefix("@")}."
+                        val intent = Intent(Intent.ACTION_SEND)
+                            .setType("text/plain")
+                            .putExtra(Intent.EXTRA_TEXT, inviteText)
+                        runCatching {
+                            context.startActivity(Intent.createChooser(intent, "Invite to SNAIL"))
+                        }
+                    }
+                },
                 modifier = Modifier.padding(start = 8.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 13.dp, vertical = 7.dp),
                 colors = ButtonDefaults.buttonColors(

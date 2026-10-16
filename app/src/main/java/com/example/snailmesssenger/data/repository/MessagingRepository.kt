@@ -24,6 +24,7 @@ interface MessagingRepository {
         replyToMessageId: String? = null,
         replyToText: String? = null,
     ): Message
+    fun forwardMessage(targetConversationId: String, sourceMessage: Message): Message
     fun sendAttachment(conversationId: String, uri: String, mimeType: String, name: String, caption: String = ""): Message
     fun editMessage(conversationId: String, messageId: String, newText: String)
     fun deleteMessage(conversationId: String, messageId: String)
@@ -94,6 +95,32 @@ object DemoMessagingRepository : MessagingRepository {
         publishChanges()
         persistConversations()
 
+        return message
+    }
+
+    override fun forwardMessage(targetConversationId: String, sourceMessage: Message): Message {
+        val index = mutableConversations.indexOfFirst { it.id == targetConversationId }
+        require(index >= 0) { "Target conversation not found." }
+        val message = Message(
+            id = "m${java.util.UUID.randomUUID()}",
+            senderId = Message.ME_ID,
+            text = sourceMessage.text,
+            timestampMs = System.currentTimeMillis(),
+            attachmentUri = sourceMessage.attachmentUri,
+            attachmentName = sourceMessage.attachmentName,
+            attachmentMimeType = sourceMessage.attachmentMimeType,
+            replyToMessageId = null,
+            replyToText = null,
+            isForwarded = true,
+        )
+        val updated = mutableConversations[index].copy(
+            messages = mutableConversations[index].messages + message,
+        )
+        mutableConversations[index] = updated
+        mutableConversations.removeAt(index)
+        mutableConversations.add(0, updated)
+        publishChanges()
+        persistConversations()
         return message
     }
 
@@ -246,7 +273,8 @@ object DemoMessagingRepository : MessagingRepository {
                         .put("reaction", message.reaction ?: JSONObject.NULL)
                         .put("isEdited", message.isEdited)
                         .put("replyToMessageId", message.replyToMessageId ?: JSONObject.NULL)
-                        .put("replyToText", message.replyToText ?: JSONObject.NULL),
+                        .put("replyToText", message.replyToText ?: JSONObject.NULL)
+                        .put("isForwarded", message.isForwarded),
                 )
             }
             array.put(
@@ -294,6 +322,7 @@ object DemoMessagingRepository : MessagingRepository {
                                 isEdited = message.optBoolean("isEdited", false),
                                 replyToMessageId = message.optString("replyToMessageId").takeUnless { it.isBlank() || it == "null" },
                                 replyToText = message.optString("replyToText").takeUnless { it.isBlank() || it == "null" },
+                                isForwarded = message.optBoolean("isForwarded", false),
                             ),
                         )
                     }

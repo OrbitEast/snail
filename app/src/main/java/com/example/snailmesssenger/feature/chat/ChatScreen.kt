@@ -170,6 +170,7 @@ fun ChatScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showAttachmentMenu by remember { mutableStateOf(false) }
     var selectedMessage by remember { mutableStateOf<Message?>(null) }
+    var forwardingMessage by remember { mutableStateOf<Message?>(null) }
     var editingMessageId by remember { mutableStateOf<String?>(null) }
     var replyTarget by remember { mutableStateOf<Message?>(null) }
     val context = LocalContext.current
@@ -743,6 +744,12 @@ fun ChatScreen(
                     ) { Text("Reply") }
                     TextButton(
                         onClick = {
+                            forwardingMessage = message
+                            selectedMessage = null
+                        },
+                    ) { Text("Forward") }
+                    TextButton(
+                        onClick = {
                             clipboardManager.setText(AnnotatedString(message.text))
                             selectedMessage = null
                         },
@@ -767,6 +774,61 @@ fun ChatScreen(
             },
             confirmButton = {
                 TextButton(onClick = { selectedMessage = null }) { Text("Close") }
+            },
+        )
+    }
+
+    forwardingMessage?.let { message ->
+        val availableTargets = conversations.filter { it.id != conversationId && !it.isArchived }
+        AlertDialog(
+            onDismissRequest = { forwardingMessage = null },
+            title = { Text("Forward message") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "Choose a conversation on this device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (availableTargets.isEmpty()) {
+                        Text(
+                            "No other conversations available.",
+                            modifier = Modifier.padding(vertical = 18.dp),
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp),
+                        ) {
+                            items(availableTargets, key = { it.id }) { target ->
+                                TextButton(
+                                    onClick = {
+                                        DemoMessagingRepository.forwardMessage(target.id, message)
+                                        forwardingMessage = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Text(
+                                            target.peer.displayName,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        Text(
+                                            message.text.ifBlank { message.attachmentName ?: "Attachment" },
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { forwardingMessage = null }) { Text("Cancel") }
             },
         )
     }
@@ -834,6 +896,14 @@ private fun MessageBubble(
                     ),
                     horizontalAlignment = Alignment.End,
                 ) {
+                    if (message.isForwarded) {
+                        Text(
+                            "Forwarded",
+                            modifier = Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 3.dp),
+                            color = textColor.copy(alpha = 0.70f),
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        )
+                    }
                     message.replyToText?.takeIf { it.isNotBlank() }?.let { quote ->
                         Surface(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
