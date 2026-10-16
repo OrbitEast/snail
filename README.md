@@ -6,7 +6,7 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 
 - Username/password sign-up and sign-in for device-local demo accounts (passwords are salted and PBKDF2-hashed).
 - One-to-one chats, a persistent Saved Messages self-chat, local group/channel creation, search across conversations and message history with direct navigation to the matching message, unread/pinned/archive filters, contacts lookup, theme and profile settings.
-- Text messages stored on the device, editable/deletable outgoing text, reply quotes, forwarding between local conversations, emoji reactions, local polls with vote counts, pinned messages with a jump banner, full-text search, and per-conversation drafts that survive navigation and app restart.
+- Text messages stored on the device, editable/deletable outgoing text, reply quotes, forwarding between local conversations, emoji reactions, local polls with vote counts, pinned messages with a jump banner, full-text search, per-conversation drafts, and scheduled local messages with cancellation.
 - Groups and broadcast-style channels can be created on-device; member/subscriber lists can be edited and persist locally, but do not synchronize with remote members.
 - Opening a chat clears its local unread count. Chat overflow supports persistent pin/mute, plain-text export via Android Sharesheet, and confirmed local history clearing.
 - The signed-in local demo account is restored after app restart; logout clears that local session.
@@ -14,6 +14,7 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 - Record voice-message audio locally with a microphone permission prompt, a live duration counter, and a dedicated in-app private-storage file URI.
 - Invite links can be shared through Android's system Sharesheet.
 - Local message/attachment metadata persistence, adjustable chat wallpaper, light/dark modes, and responsive navigation.
+- Scheduled messages use persistent Android WorkManager jobs and are appended to this device's local conversation at the due time; they are not delivered to a remote recipient. Android power-saving can delay execution.
 - Voice/video call screens remain prototypes and do not establish real network calls. Voice messages are recorded and stored locally; they are not uploaded or delivered to another user.
 
 ## Important limitations

@@ -26,6 +26,13 @@ interface MessagingRepository {
         replyToMessageId: String? = null,
         replyToText: String? = null,
     ): Message
+    fun sendScheduledMessage(
+        conversationId: String,
+        text: String,
+        scheduledId: String,
+        replyToMessageId: String? = null,
+        replyToText: String? = null,
+    ): Message
     fun createPoll(conversationId: String, question: String, options: List<String>): Message
     fun voteOnPoll(conversationId: String, messageId: String, optionIndex: Int)
     fun forwardMessage(targetConversationId: String, sourceMessage: Message): Message
@@ -123,6 +130,41 @@ object DemoMessagingRepository : MessagingRepository {
         publishChanges()
         persistConversations()
 
+        return message
+    }
+
+    override fun sendScheduledMessage(
+        conversationId: String,
+        text: String,
+        scheduledId: String,
+        replyToMessageId: String?,
+        replyToText: String?,
+    ): Message {
+        val stableId = "scheduled:$scheduledId"
+        mutableConversations.firstNotNullOfOrNull { conversation ->
+            conversation.messages.firstOrNull { it.id == stableId }
+        }?.let { return it }
+
+        val normalizedText = text.trim()
+        require(normalizedText.isNotEmpty()) { "Scheduled message cannot be empty." }
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        require(index >= 0) { "Conversation not found." }
+        val message = Message(
+            id = stableId,
+            senderId = Message.ME_ID,
+            text = normalizedText,
+            timestampMs = System.currentTimeMillis(),
+            replyToMessageId = replyToMessageId,
+            replyToText = replyToText,
+        )
+        val updated = mutableConversations[index].copy(
+            messages = mutableConversations[index].messages + message,
+        )
+        mutableConversations[index] = updated
+        mutableConversations.removeAt(index)
+        mutableConversations.add(0, updated)
+        publishChanges()
+        persistConversations()
         return message
     }
 

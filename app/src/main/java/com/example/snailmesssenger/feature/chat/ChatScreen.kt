@@ -100,6 +100,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import android.Manifest
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.Context
 import android.content.pm.PackageManager
@@ -130,6 +132,8 @@ import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.model.User
 import com.example.snailmesssenger.data.model.MessageDraft
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
+import com.example.snailmesssenger.feature.chat.ScheduledMessageItem
+import com.example.snailmesssenger.feature.chat.ScheduledMessageWorker
 import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
 import com.example.snailmesssenger.feature.theme.LocalChatTextSize
 import com.example.snailmesssenger.feature.theme.LocalSnailThemeState
@@ -195,6 +199,12 @@ fun ChatScreen(
     var managedMemberIds by remember(conversationId) { mutableStateOf(emptySet<String>()) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showClearHistoryConfirm by remember { mutableStateOf(false) }
+    var showScheduleMessageDialog by remember { mutableStateOf(false) }
+    var showScheduledMessagesDialog by remember { mutableStateOf(false) }
+    var scheduledMessageText by remember { mutableStateOf("") }
+    var scheduledAtMs by remember { mutableStateOf(System.currentTimeMillis() + 10 * 60 * 1000L) }
+    var scheduledItems by remember { mutableStateOf(emptyList<ScheduledMessageItem>()) }
+    var isLoadingScheduledItems by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var emojiCategory by remember { mutableStateOf("Smileys") }
     var recentEmojis by remember {
@@ -358,6 +368,16 @@ fun ChatScreen(
         contract = ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
         queuePickedAttachments(uris)
+    }
+
+    LaunchedEffect(showScheduledMessagesDialog, conversationId) {
+        if (showScheduledMessagesDialog) {
+            isLoadingScheduledItems = true
+            scheduledItems = runCatching {
+                ScheduledMessageWorker.pendingForConversation(context, conversationId)
+            }.getOrDefault(emptyList())
+            isLoadingScheduledItems = false
+        }
     }
 
     LaunchedEffect(inputText, replyTarget?.id, replyTarget?.text, editingMessageId, conversationId) {
@@ -544,6 +564,22 @@ fun ChatScreen(
                                         } else {
                                             searchVisible = true
                                         }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Schedule message") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        scheduledMessageText = inputText
+                                        scheduledAtMs = System.currentTimeMillis() + 10 * 60 * 1000L
+                                        showScheduleMessageDialog = true
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Scheduled messages") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showScheduledMessagesDialog = true
                                     },
                                 )
                                 DropdownMenuItem(
@@ -1213,6 +1249,157 @@ fun ChatScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearHistoryConfirm = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (showScheduleMessageDialog) {
+        AlertDialog(
+            onDismissRequest = { showScheduleMessageDialog = false },
+            title = { Text("Schedule message") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = scheduledMessageText,
+                        onValueChange = { scheduledMessageText = it.take(4_000) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Message") },
+                        placeholder = { Text("Write the message to send later") },
+                        maxLines = 5,
+                    )
+                    TextButton(
+                        onClick = {
+                            val selected = Calendar.getInstance().apply { timeInMillis = scheduledAtMs }
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, day ->
+                                    TimePickerDialog(
+                                        context,
+                                        { _, hour, minute ->
+                                            scheduledAtMs = Calendar.getInstance().apply {
+                                                set(Calendar.YEAR, year)
+                                                set(Calendar.MONTH, month)
+                                                set(Calendar.DAY_OF_MONTH, day)
+                                                set(Calendar.HOUR_OF_DAY, hour)
+                                                set(Calendar.MINUTE, minute)
+                                                set(Calendar.SECOND, 0)
+                                                set(Calendar.MILLISECOND, 0)
+                                            }.timeInMillis
+                                        },
+                                        selected.get(Calendar.HOUR_OF_DAY),
+                                        selected.get(Calendar.MINUTE),
+                                        false,
+                                    ).show()
+                                },
+                                selected.get(Calendar.YEAR),
+                                selected.get(Calendar.MONTH),
+                                selected.get(Calendar.DAY_OF_MONTH),
+                            ).show()
+                        },
+                    ) { Text("Choose date and time") }
+                    Text(
+                        SimpleDateFormat("EEE, d MMM yyyy · HH:mm", Locale.getDefault()).format(Date(scheduledAtMs)),
+                        color = if (scheduledAtMs > System.currentTimeMillis()) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        "This prototype schedules a local message on this device. Android may run it a little later than the selected time.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = scheduledMessageText.isNotBlank() && scheduledAtMs > System.currentTimeMillis() + 2_000L,
+                    onClick = {
+                        runCatching {
+                            ScheduledMessageWorker.enqueue(
+                                context = context,
+                                conversationId = conversationId,
+                                text = scheduledMessageText.trim(),
+                                scheduledAtMs = scheduledAtMs,
+                                replyToMessageId = replyTarget?.id?.takeUnless { it == "draft-reply" },
+                                replyToText = replyTarget?.text,
+                            )
+                        }.onSuccess {
+                            DemoMessagingRepository.clearDraft(conversationId)
+                            inputText = ""
+                            replyTarget = null
+                            showScheduleMessageDialog = false
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Message scheduled on this device.")
+                            }
+                        }.onFailure { error ->
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(error.message ?: "Could not schedule the message.")
+                            }
+                        }
+                    },
+                ) { Text("Schedule") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showScheduleMessageDialog = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (showScheduledMessagesDialog) {
+        AlertDialog(
+            onDismissRequest = { showScheduledMessagesDialog = false },
+            title = { Text("Scheduled messages") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    when {
+                        isLoadingScheduledItems -> Text("Loading scheduled messages…")
+                        scheduledItems.isEmpty() -> Text(
+                            "No pending scheduled messages for this conversation.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        else -> LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(scheduledItems, key = { it.workRequestId.toString() }) { item ->
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        Text(
+                                            SimpleDateFormat("EEE, d MMM · HH:mm", Locale.getDefault())
+                                                .format(Date(item.scheduledAtMs)),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                        Text(
+                                            item.text,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        TextButton(
+                                            onClick = {
+                                                ScheduledMessageWorker.cancel(context, item.workRequestId)
+                                                coroutineScope.launch {
+                                                    scheduledItems = ScheduledMessageWorker.pendingForConversation(context, conversationId)
+                                                }
+                                            },
+                                        ) { Text("Cancel scheduled message", color = MaterialTheme.colorScheme.error) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showScheduledMessagesDialog = false }) { Text("Done") }
             },
         )
     }
