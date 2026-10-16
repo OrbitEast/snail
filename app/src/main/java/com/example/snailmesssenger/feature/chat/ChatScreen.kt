@@ -48,7 +48,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.DoneAll
 import com.example.snailmesssenger.core.designsystem.DarkBubbleIn
 import com.example.snailmesssenger.core.designsystem.DarkBubbleOut
 import com.example.snailmesssenger.core.designsystem.LightBubbleIn
@@ -62,6 +61,8 @@ import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -170,6 +171,7 @@ fun ChatScreen(
     var showAttachmentMenu by remember { mutableStateOf(false) }
     var selectedMessage by remember { mutableStateOf<Message?>(null) }
     var editingMessageId by remember { mutableStateOf<String?>(null) }
+    var replyTarget by remember { mutableStateOf<Message?>(null) }
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
@@ -235,10 +237,17 @@ fun ChatScreen(
             DemoMessagingRepository.editMessage(conversationId, editId, text)
             editingMessageId = null
         } else {
-            DemoMessagingRepository.sendMessage(conversationId, text)
+            val quoted = replyTarget
+            DemoMessagingRepository.sendMessage(
+                conversationId = conversationId,
+                text = text,
+                replyToMessageId = quoted?.id,
+                replyToText = quoted?.text,
+            )
         }
         messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
         inputText = ""
+        replyTarget = null
         showEmojiPicker = false
     }
 
@@ -401,6 +410,34 @@ fun ChatScreen(
                     .animateContentSize()
                     .padding(top = 7.dp, bottom = 5.dp),
             ) {
+                AnimatedVisibility(
+                    visible = replyTarget != null && editingMessageId == null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Replying to ${replyTarget?.let { if (it.isOutgoing) "you" else conversation.peer.displayName }.orEmpty()}",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            Text(
+                                text = replyTarget?.text.orEmpty().ifBlank { "Attachment" },
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        IconButton(onClick = { replyTarget = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel reply")
+                        }
+                    }
+                }
                 AnimatedVisibility(
                     visible = editingMessageId != null,
                     enter = fadeIn() + expandVertically(),
@@ -699,6 +736,13 @@ fun ChatScreen(
                     }
                     TextButton(
                         onClick = {
+                            replyTarget = message
+                            editingMessageId = null
+                            selectedMessage = null
+                        },
+                    ) { Text("Reply") }
+                    TextButton(
+                        onClick = {
                             clipboardManager.setText(AnnotatedString(message.text))
                             selectedMessage = null
                         },
@@ -745,6 +789,8 @@ private fun MessageBubble(
     val messageFontSize = LocalChatTextSize.current
     val bubbleRadius = LocalChatBubbleRadius.current
     val outgoing = message.isOutgoing
+    val context = LocalContext.current
+    var showImagePreview by remember(message.id) { mutableStateOf(false) }
     val bubbleColor = when {
         outgoing && isDark -> DarkBubbleOut
         outgoing && !isDark -> LightBubbleOut
@@ -788,6 +834,28 @@ private fun MessageBubble(
                     ),
                     horizontalAlignment = Alignment.End,
                 ) {
+                    message.replyToText?.takeIf { it.isNotBlank() }?.let { quote ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = textColor.copy(alpha = 0.08f),
+                        ) {
+                            Column(modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)) {
+                                Text(
+                                    "Reply",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                )
+                                Text(
+                                    quote,
+                                    color = textColor.copy(alpha = 0.82f),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
                     val mimeType = message.attachmentMimeType.orEmpty()
                     if (message.attachmentUri != null) {
                         when {
@@ -795,11 +863,14 @@ private fun MessageBubble(
                                 model = message.attachmentUri,
                                 contentDescription = message.attachmentName ?: "Attached image",
                                 modifier = Modifier.width(240.dp).heightIn(min = 100.dp, max = 230.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { showImagePreview = true },
                                 contentScale = ContentScale.Crop,
                             )
                             mimeType.startsWith("video/") -> Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable { openExternalAttachment(context, message) }
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(Icons.Default.PlayCircleFilled, contentDescription = null, modifier = Modifier.size(34.dp))
@@ -814,7 +885,9 @@ private fun MessageBubble(
                                 }
                             }
                             else -> Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable { openExternalAttachment(context, message) }
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(Icons.Default.InsertDriveFile, contentDescription = null, modifier = Modifier.size(30.dp))
@@ -860,8 +933,8 @@ private fun MessageBubble(
                         if (outgoing) {
                             Spacer(Modifier.width(4.dp))
                             Icon(
-                                imageVector = Icons.Default.DoneAll,
-                                contentDescription = "Sent on this device",
+                                imageVector = Icons.Default.Done,
+                                contentDescription = "Saved on this device",
                                 modifier = Modifier.size(16.dp),
                                 tint = if (isDark) ReadCheckmarkGreen else Color(0xFF40C351),
                             )
@@ -883,6 +956,51 @@ private fun MessageBubble(
                 }
             }
         }
+        if (showImagePreview && message.attachmentUri != null) {
+            Dialog(
+                onDismissRequest = { showImagePreview = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false),
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AsyncImage(
+                        model = message.attachmentUri,
+                        contentDescription = message.attachmentName ?: "Image preview",
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                    IconButton(
+                        onClick = { showImagePreview = false },
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
+                            .background(Color(0x66000000), CircleShape),
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close image preview", tint = Color.White)
+                    }
+                    Text(
+                        text = message.attachmentName.orEmpty(),
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(20.dp),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun openExternalAttachment(context: Context, message: Message) {
+    val rawUri = message.attachmentUri ?: return
+    val uri = runCatching { Uri.parse(rawUri) }.getOrNull() ?: return
+    val mimeType = message.attachmentMimeType?.takeIf { it.isNotBlank() } ?: "*/*"
+    val intent = Intent(Intent.ACTION_VIEW)
+        .setDataAndType(uri, mimeType)
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    runCatching {
+        context.startActivity(Intent.createChooser(intent, "Open attachment"))
     }
 }
 

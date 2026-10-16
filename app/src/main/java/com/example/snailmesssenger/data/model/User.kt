@@ -31,6 +31,8 @@ data class Message(
     val attachmentMimeType: String? = null,
     val reaction: String? = null,
     val isEdited: Boolean = false,
+    val replyToMessageId: String? = null,
+    val replyToText: String? = null,
 ) {
     val isOutgoing: Boolean get() = senderId == ME_ID
 

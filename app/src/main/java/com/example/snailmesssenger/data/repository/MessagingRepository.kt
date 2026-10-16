@@ -18,7 +18,12 @@ import org.json.JSONObject
 interface MessagingRepository {
     fun getConversations(): List<Conversation>
     fun getConversation(id: String): Conversation?
-    fun sendMessage(conversationId: String, text: String): Message
+    fun sendMessage(
+        conversationId: String,
+        text: String,
+        replyToMessageId: String? = null,
+        replyToText: String? = null,
+    ): Message
     fun sendAttachment(conversationId: String, uri: String, mimeType: String, name: String, caption: String = ""): Message
     fun editMessage(conversationId: String, messageId: String, newText: String)
     fun deleteMessage(conversationId: String, messageId: String)
@@ -62,7 +67,12 @@ object DemoMessagingRepository : MessagingRepository {
     override fun getConversation(id: String): Conversation? =
         mutableConversations.firstOrNull { it.id == id }
 
-    override fun sendMessage(conversationId: String, text: String): Message {
+    override fun sendMessage(
+        conversationId: String,
+        text: String,
+        replyToMessageId: String?,
+        replyToText: String?,
+    ): Message {
         val normalizedText = text.trim()
         require(normalizedText.isNotEmpty()) { "Message cannot be empty." }
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
@@ -72,6 +82,8 @@ object DemoMessagingRepository : MessagingRepository {
             senderId = Message.ME_ID,
             text = normalizedText,
             timestampMs = System.currentTimeMillis(),
+            replyToMessageId = replyToMessageId,
+            replyToText = replyToText,
         )
         val updated = mutableConversations[index].copy(
             messages = mutableConversations[index].messages + message,
@@ -232,7 +244,9 @@ object DemoMessagingRepository : MessagingRepository {
                         .put("attachmentName", message.attachmentName ?: JSONObject.NULL)
                         .put("attachmentMimeType", message.attachmentMimeType ?: JSONObject.NULL)
                         .put("reaction", message.reaction ?: JSONObject.NULL)
-                        .put("isEdited", message.isEdited),
+                        .put("isEdited", message.isEdited)
+                        .put("replyToMessageId", message.replyToMessageId ?: JSONObject.NULL)
+                        .put("replyToText", message.replyToText ?: JSONObject.NULL),
                 )
             }
             array.put(
@@ -278,6 +292,8 @@ object DemoMessagingRepository : MessagingRepository {
                                 attachmentMimeType = message.optString("attachmentMimeType").takeUnless { it.isBlank() || it == "null" },
                                 reaction = message.optString("reaction").takeUnless { it.isBlank() || it == "null" },
                                 isEdited = message.optBoolean("isEdited", false),
+                                replyToMessageId = message.optString("replyToMessageId").takeUnless { it.isBlank() || it == "null" },
+                                replyToText = message.optString("replyToText").takeUnless { it.isBlank() || it == "null" },
                             ),
                         )
                     }
