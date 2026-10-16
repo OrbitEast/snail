@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.snailmesssenger.core.designsystem.SnailLogo
 
 @Composable
 fun SnailSearchTopBar(
@@ -45,11 +46,11 @@ fun SnailSearchTopBar(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        shadowElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(58.dp).padding(horizontal = 6.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start,
         ) {
@@ -60,10 +61,11 @@ fun SnailSearchTopBar(
                     }
                 } else {
                     IconButton(onClick = onOpenMenu) {
-                        Icon(Icons.Default.Menu, contentDescription = "Open navigation drawer")
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
                     }
                 }
             }
+
             AnimatedVisibility(
                 visible = searchActive,
                 enter = fadeIn() + expandHorizontally(),
@@ -87,9 +89,9 @@ fun SnailSearchTopBar(
                     },
                     shape = CircleShape,
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -97,19 +99,31 @@ fun SnailSearchTopBar(
                     ),
                 )
             }
+
             AnimatedVisibility(
                 visible = !searchActive,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
-                Text(
-                    text = "Snail",
+                Row(
                     modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SnailLogo(
+                        size = 36.dp,
+                        backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                        shellColor = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = "SNAIL",
+                        modifier = Modifier.padding(start = 10.dp),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
+
             if (!searchActive) {
                 IconButton(onClick = onActivateSearch) {
                     Icon(Icons.Default.Search, contentDescription = "Search chats and contacts")
