@@ -13,6 +13,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,6 +34,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +81,8 @@ fun MainTabsScreen(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var showCalls by remember { mutableStateOf(false) }
+    val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
+    val unreadCount = conversations.sumOf { it.unreadCount }
 
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
@@ -136,6 +141,7 @@ fun MainTabsScreen(
 
         ModernBottomBar(
             selectedTab = selectedTab,
+            unreadCount = unreadCount,
             onTabSelected = { selectedTab = it },
             modifier = Modifier.align(Alignment.BottomCenter)
                 .navigationBarsPadding()
@@ -156,6 +162,7 @@ fun MainTabsScreen(
 @Composable
 private fun ModernBottomBar(
     selectedTab: Int,
+    unreadCount: Int,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -188,13 +195,32 @@ private fun ModernBottomBar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        Icon(
-                            imageVector = tab.icon,
-                            contentDescription = tab.label,
-                            modifier = Modifier.size((22f + progress * 2f).dp),
-                            tint = if (selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Box(
+                            modifier = Modifier.size((24f + progress * 2f).dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = tab.label,
+                                modifier = Modifier.size((22f + progress * 2f).dp),
+                                tint = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (index == 0 && unreadCount > 0) {
+                                Surface(
+                                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 5.dp, y = (-3).dp),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError,
+                                ) {
+                                    Text(
+                                        text = unreadCount.coerceAtMost(99).let { if (it == 99) "99+" else it.toString() },
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    )
+                                }
+                            }
+                        }
                         Text(
                             text = tab.label,
                             style = MaterialTheme.typography.labelSmall,
