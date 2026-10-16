@@ -1,6 +1,14 @@
 package com.example.snailmesssenger.feature.home
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +44,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.snailmesssenger.core.designsystem.SnailMotion
+import com.example.snailmesssenger.core.designsystem.snailSelectionProgress
 import com.example.snailmesssenger.data.preferences.UserPreferences
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import com.example.snailmesssenger.feature.profile.ProfileScreen
@@ -70,14 +80,27 @@ fun MainTabsScreen(
     var showCalls by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
     ) {
         AnimatedContent(
             targetState = selectedTab,
             label = "main-tab-content",
             modifier = Modifier.fillMaxSize(),
+            transitionSpec = {
+                val forward = targetState > initialState
+                val enter = slideInHorizontally(
+                    initialOffsetX = { if (forward) it / 9 else -it / 9 },
+                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                ) + fadeIn(tween(190)) + scaleIn(
+                    initialScale = 0.985f,
+                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                )
+                val exit = slideOutHorizontally(
+                    targetOffsetX = { if (forward) -it / 12 else it / 12 },
+                    animationSpec = tween(240, easing = FastOutSlowInEasing),
+                ) + fadeOut(tween(150))
+                enter togetherWith exit
+            },
         ) { tab ->
             when (tab) {
                 0 -> ChatListScreen(
@@ -114,8 +137,7 @@ fun MainTabsScreen(
         ModernBottomBar(
             selectedTab = selectedTab,
             onTabSelected = { selectedTab = it },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         )
@@ -125,12 +147,8 @@ fun MainTabsScreen(
         AlertDialog(
             onDismissRequest = { showCalls = false },
             title = { Text("Calls") },
-            text = {
-                Text("Call history\n\nNo calls yet. Incoming, outgoing and missed call indicators are ready for the local call layer.")
-            },
-            confirmButton = {
-                TextButton(onClick = { showCalls = false }) { Text("Done") }
-            },
+            text = { Text("Call history\n\nNo calls yet. Incoming, outgoing and missed call indicators are ready for the local call layer.") },
+            confirmButton = { TextButton(onClick = { showCalls = false }) { Text("Done") } },
         )
     }
 }
@@ -143,15 +161,12 @@ private fun ModernBottomBar(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(30.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
         contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 6.dp,
-        shadowElevation = 14.dp,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-        ),
+        shadowElevation = 16.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f)),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 5.dp),
@@ -160,13 +175,13 @@ private fun ModernBottomBar(
         ) {
             mainTabs.forEachIndexed { index, tab ->
                 val selected = selectedTab == index
+                val progress = snailSelectionProgress(selected)
                 Surface(
                     onClick = { onTabSelected(index) },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(22.dp),
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.90f)
-                    } else Color.Transparent,
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = progress * 0.90f),
+                    tonalElevation = (progress * 2f).dp,
                 ) {
                     Column(
                         modifier = Modifier.padding(vertical = 7.dp),
@@ -176,7 +191,7 @@ private fun ModernBottomBar(
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = tab.label,
-                            modifier = Modifier.size(23.dp),
+                            modifier = Modifier.size((22f + progress * 2f).dp),
                             tint = if (selected) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
