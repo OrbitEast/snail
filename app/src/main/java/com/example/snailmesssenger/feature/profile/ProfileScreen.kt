@@ -54,6 +54,7 @@ fun ProfileScreen(
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
     var user by remember { mutableStateOf(DemoAuthRepository.currentUser) }
@@ -75,8 +76,10 @@ fun ProfileScreen(
                 TopAppBar(
                     title = { Text("Profile", style = MaterialTheme.typography.titleLarge) },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        if (showBackButton) {
+                            IconButton(onClick = onBack) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
                         }
                     },
                 )
