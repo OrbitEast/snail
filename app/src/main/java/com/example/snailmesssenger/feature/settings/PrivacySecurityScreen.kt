@@ -1,6 +1,10 @@
 package com.example.snailmesssenger.feature.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -42,6 +46,9 @@ import com.example.snailmesssenger.core.designsystem.SnailSectionHeading
 import com.example.snailmesssenger.core.designsystem.SnailSectionRow
 import com.example.snailmesssenger.core.designsystem.Spacing
 import com.example.snailmesssenger.feature.security.SecurityViewModel
+import com.example.snailmesssenger.data.model.MockData
+import com.example.snailmesssenger.data.model.User
+import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +57,11 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
     var photoOption by remember { mutableStateOf("Everybody") }
     var passcodeEnabled by remember { mutableStateOf(false) }
     var unsupportedFeature by remember { mutableStateOf<String?>(null) }
+    var showBlockedUsersDialog by remember { mutableStateOf(false) }
+    val blockedUserIds by DemoMessagingRepository.blockedUserIdsFlow.collectAsState()
+    val knownUsers = remember(blockedUserIds) {
+        (MockData.discoverableContacts + MockData.conversations.map { it.peer }).distinctBy { it.id }
+    }
     var showPinDialog by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
     val securityState by securityViewModel.uiState.collectAsState()
@@ -65,7 +77,12 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SnailSectionRow(title = "Profile Photo", subtitle = "$photoOption · local preview", icon = Icons.Default.Security, onClick = { photoOption = if (photoOption == "Everybody") "My Contacts" else "Everybody" })
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SnailSectionRow(title = "Blocked Users", subtitle = "0 blocked", icon = Icons.Default.Block, onClick = { unsupportedFeature = "Blocked Users" })
+            SnailSectionRow(
+                title = "Blocked Users",
+                subtitle = "${blockedUserIds.size} blocked · stored on this device",
+                icon = Icons.Default.Block,
+                onClick = { showBlockedUsersDialog = true },
+            )
 
             Spacer(Modifier.height(Spacing.xl))
             SnailSectionHeading("Security")
@@ -86,6 +103,57 @@ fun PrivacySecurityScreen(onBack: () -> Unit, securityViewModel: SecurityViewMod
             SnailSectionRow(title = "Active Sessions", subtitle = "Mobile · Desktop · Web", icon = Icons.Default.Devices, onClick = { unsupportedFeature = "Active Sessions" })
             Spacer(Modifier.height(Spacing.xxxl))
         }
+    }
+
+    if (showBlockedUsersDialog) {
+        val blockedProfiles: List<User> = blockedUserIds.map { blockedId ->
+            knownUsers.firstOrNull { it.id == blockedId }
+                ?: User(
+                    id = blockedId,
+                    username = "unknown",
+                    displayName = blockedId,
+                    bio = "",
+                    isOnline = false,
+                )
+        }
+        AlertDialog(
+            onDismissRequest = { showBlockedUsersDialog = false },
+            title = { Text("Blocked users") },
+            text = {
+                if (blockedProfiles.isEmpty()) {
+                    Text(
+                        "No blocked users. Block a contact from their profile in a conversation.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().height(340.dp),
+                    ) {
+                        items(blockedProfiles, key = { it.id }) { blocked ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(blocked.displayName, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        if (blocked.username == "unknown") "Local user ID" else "@${blocked.username}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                TextButton(onClick = { DemoMessagingRepository.unblockUser(blocked.id) }) {
+                                    Text("Unblock")
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showBlockedUsersDialog = false }) { Text("Done") }
+            },
+        )
     }
 
     if (showPinDialog) {

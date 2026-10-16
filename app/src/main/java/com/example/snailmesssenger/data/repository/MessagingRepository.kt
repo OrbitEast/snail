@@ -54,6 +54,10 @@ interface MessagingRepository {
     fun getDraft(conversationId: String): MessageDraft
     fun saveDraft(conversationId: String, draft: MessageDraft)
     fun clearDraft(conversationId: String)
+    fun blockUser(userId: String)
+    fun unblockUser(userId: String)
+    fun isUserBlocked(userId: String): Boolean
+    fun getBlockedUserIds(): Set<String>
 }
 
 /** A one-time request to open a specific saved message. */
@@ -75,6 +79,8 @@ object DemoMessagingRepository : MessagingRepository {
     val conversationsFlow: StateFlow<List<Conversation>> = _conversationsFlow
     private val _pendingMessageJump = MutableStateFlow<MessageJumpRequest?>(null)
     val pendingMessageJump: StateFlow<MessageJumpRequest?> = _pendingMessageJump
+    private val _blockedUserIdsFlow = MutableStateFlow<Set<String>>(emptySet())
+    val blockedUserIdsFlow: StateFlow<Set<String>> = _blockedUserIdsFlow
 
     fun requestMessageJump(conversationId: String, messageId: String) {
         _pendingMessageJump.value = MessageJumpRequest(conversationId, messageId)
@@ -118,6 +124,7 @@ object DemoMessagingRepository : MessagingRepository {
             mutableConversations.addAll(parsed)
         }
         _conversationsFlow.value = mutableConversations.toList()
+        _blockedUserIdsFlow.value = loadBlockedUserIds(store)
         persistConversations()
     }
 
@@ -170,6 +177,57 @@ object DemoMessagingRepository : MessagingRepository {
         return mutableConversations.firstOrNull { it.id == id }
     }
 
+    override fun blockUser(userId: String) {
+        ensureAccountScope()
+        val normalized = userId.trim()
+        require(normalized.isNotEmpty()) { "User ID cannot be empty." }
+        if (_blockedUserIdsFlow.value.contains(normalized)) return
+        _blockedUserIdsFlow.value = _blockedUserIdsFlow.value + normalized
+        persistBlockedUserIds()
+    }
+
+    override fun unblockUser(userId: String) {
+        ensureAccountScope()
+        val normalized = userId.trim()
+        if (normalized !in _blockedUserIdsFlow.value) return
+        _blockedUserIdsFlow.value = _blockedUserIdsFlow.value - normalized
+        persistBlockedUserIds()
+    }
+
+    override fun isUserBlocked(userId: String): Boolean {
+        ensureAccountScope()
+        return userId in _blockedUserIdsFlow.value
+    }
+
+    override fun getBlockedUserIds(): Set<String> {
+        ensureAccountScope()
+        return _blockedUserIdsFlow.value.toSet()
+    }
+
+    private fun requireNotBlockedConversation(conversationId: String) {
+        val conversation = mutableConversations.firstOrNull { it.id == conversationId }
+            ?: throw IllegalArgumentException("Conversation not found.")
+        if (conversation.kind == ConversationKind.DIRECT && conversation.peer.id in _blockedUserIdsFlow.value) {
+            throw IllegalStateException("You blocked this user. Unblock them before sending messages.")
+        }
+    }
+
+    private fun loadBlockedUserIds(store: SharedPreferences): Set<String> {
+        val stored = store.getString(KEY_BLOCKED_USERS, null) ?: return emptySet()
+        val decoded = runCatching { LocalVault.decrypt(stored) }.getOrNull() ?: return emptySet()
+        val array = runCatching { JSONArray(decoded) }.getOrNull() ?: return emptySet()
+        return buildSet {
+            for (index in 0 until array.length()) {
+                array.optString(index).takeIf { it.isNotBlank() }?.let(::add)
+            }
+        }
+    }
+
+    private fun persistBlockedUserIds() {
+        val encoded = LocalVault.encrypt(JSONArray(_blockedUserIdsFlow.value.toList()).toString())
+        preferences?.edit()?.putString(KEY_BLOCKED_USERS, encoded)?.apply()
+    }
+
     override fun sendMessage(
         conversationId: String,
         text: String,
@@ -177,6 +235,7 @@ object DemoMessagingRepository : MessagingRepository {
         replyToText: String?,
     ): Message {
         ensureAccountScope()
+        requireNotBlockedConversation(conversationId)
         val normalizedText = text.trim()
         require(normalizedText.isNotEmpty()) { "Message cannot be empty." }
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
@@ -209,6 +268,7 @@ object DemoMessagingRepository : MessagingRepository {
         replyToText: String?,
     ): Message {
         ensureAccountScope()
+        requireNotBlockedConversation(conversationId)
         val stableId = "scheduled:$scheduledId"
         mutableConversations.firstNotNullOfOrNull { conversation ->
             conversation.messages.firstOrNull { it.id == stableId }
@@ -239,6 +299,7 @@ object DemoMessagingRepository : MessagingRepository {
 
     override fun createPoll(conversationId: String, question: String, options: List<String>): Message {
         ensureAccountScope()
+        requireNotBlockedConversation(conversationId)
         val normalizedQuestion = question.trim()
         val normalizedOptions = options.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         require(normalizedQuestion.isNotEmpty()) { "Poll question cannot be empty." }
@@ -301,6 +362,7 @@ object DemoMessagingRepository : MessagingRepository {
 
     override fun forwardMessage(targetConversationId: String, sourceMessage: Message): Message {
         ensureAccountScope()
+        requireNotBlockedConversation(targetConversationId)
         val index = mutableConversations.indexOfFirst { it.id == targetConversationId }
         require(index >= 0) { "Target conversation not found." }
         val message = Message(
@@ -338,6 +400,7 @@ object DemoMessagingRepository : MessagingRepository {
         caption: String,
     ): Message {
         ensureAccountScope()
+        requireNotBlockedConversation(conversationId)
         require(uri.isNotBlank()) { "Attachment URI is required." }
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
         require(index >= 0) { "Conversation not found." }
@@ -745,4 +808,5 @@ object DemoMessagingRepository : MessagingRepository {
     private const val PREFS_NAME = "snail_local_messages"
     private const val KEY_CONVERSATIONS = "conversations_json"
     private const val DRAFT_PREFIX = "draft_"
+    private const val KEY_BLOCKED_USERS = "blocked_users_encrypted"
 }

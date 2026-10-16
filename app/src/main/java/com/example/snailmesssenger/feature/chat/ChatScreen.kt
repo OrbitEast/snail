@@ -164,6 +164,7 @@ fun ChatScreen(
         NightMode.DARK -> true
     }
     val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
+    val blockedUserIds by DemoMessagingRepository.blockedUserIdsFlow.collectAsState()
     val pendingMessageJump by DemoMessagingRepository.pendingMessageJump.collectAsState()
     val conversation = conversations.firstOrNull { it.id == conversationId }
     if (conversation == null) {
@@ -190,11 +191,14 @@ fun ChatScreen(
         return
     }
 
+    val isPeerBlocked = conversation.kind == ConversationKind.DIRECT &&
+        conversation.peer.id in blockedUserIds
     var inputText by remember(conversationId) {
         mutableStateOf(DemoMessagingRepository.getDraft(conversationId).text)
     }
     var messages by remember(conversationId) { mutableStateOf(conversation.messages) }
     var showProfileSheet by remember { mutableStateOf(false) }
+    var showBlockUserConfirm by remember { mutableStateOf(false) }
     var showManageMembers by remember { mutableStateOf(false) }
     var managedMemberIds by remember(conversationId) { mutableStateOf(emptySet<String>()) }
     var showOverflowMenu by remember { mutableStateOf(false) }
@@ -458,6 +462,10 @@ fun ChatScreen(
     }
 
     fun send() {
+        if (isPeerBlocked) {
+            coroutineScope.launch { snackbarHostState.showSnackbar("Unblock this user before sending a message.") }
+            return
+        }
         val text = inputText.trim()
         if (text.isEmpty()) return
         val editId = editingMessageId
@@ -720,6 +728,41 @@ fun ChatScreen(
                     .animateContentSize()
                     .padding(top = 7.dp, bottom = 5.dp),
             ) {
+                if (isPeerBlocked) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.72f),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.Block,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "You blocked ${conversation.peer.displayName}",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                                Text(
+                                    "Unblock to send messages or attachments.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
+                            TextButton(onClick = { DemoMessagingRepository.unblockUser(conversation.peer.id) }) {
+                                Text("Unblock")
+                            }
+                        }
+                    }
+                }
                 AnimatedVisibility(
                     visible = replyTarget != null && editingMessageId == null,
                     enter = fadeIn() + expandVertically(),
@@ -849,6 +892,7 @@ fun ChatScreen(
                         Box {
                             IconButton(
                                 onClick = { showAttachmentMenu = true },
+                                enabled = !isPeerBlocked,
                                 modifier = Modifier.size(38.dp),
                             ) {
                                 Icon(
@@ -892,6 +936,7 @@ fun ChatScreen(
                         }
                         IconButton(
                             onClick = { showEmojiPicker = !showEmojiPicker },
+                            enabled = !isPeerBlocked,
                             modifier = Modifier.size(42.dp),
                         ) {
                             Icon(
@@ -903,6 +948,7 @@ fun ChatScreen(
                             )
                         }
                         IconButton(
+                            enabled = !isPeerBlocked,
                             onClick = {
                                 if (isRecordingVoice) {
                                     stopAndSendVoiceRecording()
@@ -939,7 +985,7 @@ fun ChatScreen(
                             BasicTextField(
                                 value = inputText,
                                 onValueChange = { inputText = it },
-                                enabled = !isRecordingVoice,
+                                enabled = !isRecordingVoice && !isPeerBlocked,
                                 modifier = Modifier.fillMaxWidth(),
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -958,7 +1004,7 @@ fun ChatScreen(
                     Spacer(Modifier.width(8.dp))
                     IconButton(
                         onClick = { send() },
-                        enabled = inputText.trim().isNotEmpty() && !isRecordingVoice,
+                        enabled = inputText.trim().isNotEmpty() && !isRecordingVoice && !isPeerBlocked,
                         modifier = Modifier.padding(bottom = 1.dp).size(48.dp)
                             .clip(CircleShape)
                             .background(
@@ -1650,6 +1696,35 @@ fun ChatScreen(
         )
     }
 
+    if (showBlockUserConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBlockUserConfirm = false },
+            title = { Text(if (isPeerBlocked) "Unblock user?" else "Block user?") },
+            text = {
+                Text(
+                    if (isPeerBlocked) {
+                        "This allows you to send messages to ${conversation.peer.displayName} again on this device."
+                    } else {
+                        "You won't be able to send messages to ${conversation.peer.displayName} from this device until you unblock them. Existing history stays saved."
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (isPeerBlocked) DemoMessagingRepository.unblockUser(conversation.peer.id)
+                        else DemoMessagingRepository.blockUser(conversation.peer.id)
+                        showBlockUserConfirm = false
+                        showProfileSheet = false
+                    },
+                ) { Text(if (isPeerBlocked) "Unblock" else "Block", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockUserConfirm = false }) { Text("Cancel") }
+            },
+        )
+    }
+
     if (showProfileSheet) {
         val memberDirectory = (MockData.discoverableContacts + MockData.conversations.map { it.peer })
             .distinctBy { it.id }
@@ -1666,6 +1741,8 @@ fun ChatScreen(
                 showManageMembers = true
             },
             isMuted = conversation.isMuted,
+            isBlocked = isPeerBlocked,
+            onToggleBlock = { showBlockUserConfirm = true },
             onToggleMute = {
                 DemoMessagingRepository.setConversationMuted(conversation.id, !conversation.isMuted)
             },

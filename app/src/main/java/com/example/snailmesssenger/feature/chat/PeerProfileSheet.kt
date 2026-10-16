@@ -47,6 +47,8 @@ fun PeerProfileSheet(
     onManageMembers: () -> Unit = {},
     isMuted: Boolean = false,
     onToggleMute: () -> Unit = {},
+    isBlocked: Boolean = false,
+    onToggleBlock: () -> Unit = {},
     onDismiss: () -> Unit,
     onCallClick: () -> Unit,
 ) {
@@ -126,6 +128,12 @@ fun PeerProfileSheet(
                     label = if (isMuted) "Unmute" else "Mute",
                     onClick = onToggleMute,
                 )
+                Spacer(Modifier.width(Spacing.md))
+                ProfileActionButton(
+                    icon = Icons.Default.Block,
+                    label = if (isBlocked) "Unblock" else "Block",
+                    onClick = onToggleBlock,
+                )
             }
 
             Spacer(Modifier.height(Spacing.xxl))
@@ -165,7 +173,7 @@ fun PeerProfileSheet(
             SnailSectionRow(
                 title = "Privacy",
                 subtitle = when (kind) {
-                    ConversationKind.DIRECT -> "One-to-one conversation"
+                    ConversationKind.DIRECT -> if (isBlocked) "User blocked on this device" else "One-to-one conversation"
                     ConversationKind.GROUP -> "Group conversation · local prototype"
                     ConversationKind.CHANNEL -> "Broadcast-style channel · local prototype"
                 },
