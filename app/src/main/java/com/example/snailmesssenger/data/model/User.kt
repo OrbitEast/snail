@@ -30,6 +30,7 @@ data class Conversation(
     val participantIds: List<String> = emptyList(),
     val createdBy: String? = null,
     val pinnedMessageId: String? = null,
+    val isSavedMessages: Boolean = false,
 )
 
 /** A draft is stored locally per conversation and never sent until the user taps Send. */

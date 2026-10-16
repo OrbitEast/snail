@@ -432,7 +432,10 @@ fun ChatScreen(
                     title = {
                         Row(
                             modifier = Modifier.clip(MaterialTheme.shapes.small)
-                                .clickable { showProfileSheet = true }
+                                .then(
+                                    if (conversation.isSavedMessages) Modifier
+                                    else Modifier.clickable { showProfileSheet = true },
+                                )
                                 .padding(vertical = 3.dp, horizontal = 2.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -451,10 +454,12 @@ fun ChatScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    text = when (conversation.kind) {
-                                        ConversationKind.DIRECT -> if (conversation.peer.isOnline) "online" else "last seen recently"
-                                        ConversationKind.GROUP -> "${conversation.participantIds.size} members"
-                                        ConversationKind.CHANNEL -> "${conversation.participantIds.size} subscribers"
+                                    text = when {
+                                        conversation.isSavedMessages -> "Personal space · only you"
+                                        conversation.kind == ConversationKind.DIRECT ->
+                                            if (conversation.peer.isOnline) "online" else "last seen recently"
+                                        conversation.kind == ConversationKind.GROUP -> "${conversation.participantIds.size} members"
+                                        else -> "${conversation.participantIds.size} subscribers"
                                     },
                                     style = MaterialTheme.typography.labelMedium,
                                     color = if (conversation.kind == ConversationKind.DIRECT && conversation.peer.isOnline) ReadCheckmarkGreen
@@ -470,7 +475,7 @@ fun ChatScreen(
                         }
                     },
                     actions = {
-                        if (conversation.kind == ConversationKind.DIRECT) {
+                        if (conversation.kind == ConversationKind.DIRECT && !conversation.isSavedMessages) {
                             IconButton(onClick = onVoiceCall) {
                                 Icon(Icons.Default.Call, contentDescription = "Start voice call")
                             }

@@ -9,6 +9,7 @@
 - [ ] Search for text that exists only in an older message; verify it appears under the global MESSAGES section and opens the correct conversation.
 - [ ] Pin a message, verify the banner survives relaunch and jumps to the right item, then unpin it.
 - [ ] Type a draft and reply, leave the chat, return and restart the app; confirm text/reply draft restores and clears after sending.
+- [ ] Open Saved Messages twice and confirm only one self-chat exists and its messages persist after app restart.
 - [ ] Pick multiple photos/videos and documents (up to 10 per action), add a caption, and verify attachment ordering and persistence.
 - [ ] Record a voice message, cancel it by navigating away while recording, and verify the latest recorder is stopped/released and no partial recording is sent.
 - [ ] Test light, dark, and system themes, chat wallpapers, and bottom navigation across small and large screens.

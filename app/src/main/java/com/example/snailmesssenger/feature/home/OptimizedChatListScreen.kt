@@ -123,6 +123,14 @@ fun OptimizedChatListScreen(
                         },
                     )
                     DropdownMenuItem(
+                        text = { Text("Saved Messages") },
+                        onClick = {
+                            showNewConversationMenu = false
+                            val saved = DemoMessagingRepository.getOrCreateSavedMessages()
+                            onOpenChat(saved.id)
+                        },
+                    )
+                    DropdownMenuItem(
                         text = { Text("New group") },
                         onClick = {
                             showNewConversationMenu = false

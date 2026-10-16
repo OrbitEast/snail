@@ -41,6 +41,7 @@ interface MessagingRepository {
     fun markConversationRead(conversationId: String)
     fun clearConversationHistory(conversationId: String)
     fun setPinnedMessage(conversationId: String, messageId: String?)
+    fun getOrCreateSavedMessages(): Conversation
     fun getDraft(conversationId: String): MessageDraft
     fun saveDraft(conversationId: String, draft: MessageDraft)
     fun clearDraft(conversationId: String)
@@ -362,6 +363,29 @@ object DemoMessagingRepository : MessagingRepository {
         return conversation
     }
 
+    override fun getOrCreateSavedMessages(): Conversation {
+        mutableConversations.firstOrNull { it.isSavedMessages }?.let { return it }
+        val conversation = Conversation(
+            id = "saved-messages",
+            peer = User(
+                id = "saved-messages",
+                username = "saved",
+                displayName = "Saved Messages",
+                bio = "Your personal space for notes and messages.",
+                isOnline = false,
+            ),
+            kind = ConversationKind.DIRECT,
+            title = "Saved Messages",
+            participantIds = listOf("me"),
+            isPinned = true,
+            isSavedMessages = true,
+        )
+        mutableConversations.add(0, conversation)
+        publishChanges()
+        persistConversations()
+        return conversation
+    }
+
     override fun getDraft(conversationId: String): MessageDraft {
         val raw = preferences?.getString("$DRAFT_PREFIX$conversationId", null) ?: return MessageDraft()
         val json = runCatching { JSONObject(raw) }.getOrNull() ?: return MessageDraft()
@@ -469,6 +493,7 @@ object DemoMessagingRepository : MessagingRepository {
                     .put("participantIds", JSONArray(conversation.participantIds))
                     .put("createdBy", conversation.createdBy ?: JSONObject.NULL)
                     .put("pinnedMessageId", conversation.pinnedMessageId ?: JSONObject.NULL)
+                    .put("isSavedMessages", conversation.isSavedMessages)
                     .put("messages", messages),
             )
         }
@@ -534,6 +559,7 @@ object DemoMessagingRepository : MessagingRepository {
                         }.orEmpty(),
                         createdBy = item.optString("createdBy").takeUnless { it.isBlank() || it == "null" },
                         pinnedMessageId = item.optString("pinnedMessageId").takeUnless { it.isBlank() || it == "null" },
+                        isSavedMessages = item.optBoolean("isSavedMessages", false),
                     ),
                 )
             }
