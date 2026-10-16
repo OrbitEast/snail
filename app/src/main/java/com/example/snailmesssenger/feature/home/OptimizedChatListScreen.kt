@@ -28,7 +28,11 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +59,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.snailmesssenger.data.model.ConversationKind
+import com.example.snailmesssenger.data.model.MockData
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 
 private val SearchMatchBlue = Color(0xFF2481CC)
@@ -69,6 +75,11 @@ fun OptimizedChatListScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var searchActive by remember { mutableStateOf(false) }
+    var showNewConversationMenu by remember { mutableStateOf(false) }
+    var showGroupCreator by remember { mutableStateOf(false) }
+    var showChannelCreator by remember { mutableStateOf(false) }
+    var newConversationName by remember { mutableStateOf("") }
+    var selectedMemberIds by remember { mutableStateOf(setOf<String>()) }
     val listState = rememberLazyListState()
     val showFloatingHeader by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 8 }
@@ -91,13 +102,45 @@ fun OptimizedChatListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNewChat,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape,
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "New chat")
+            Box {
+                FloatingActionButton(
+                    onClick = { showNewConversationMenu = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = CircleShape,
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Create a chat, group, or channel")
+                }
+                DropdownMenu(
+                    expanded = showNewConversationMenu,
+                    onDismissRequest = { showNewConversationMenu = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("New chat") },
+                        onClick = {
+                            showNewConversationMenu = false
+                            onNewChat()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("New group") },
+                        onClick = {
+                            showNewConversationMenu = false
+                            newConversationName = ""
+                            selectedMemberIds = emptySet()
+                            showGroupCreator = true
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("New channel") },
+                        onClick = {
+                            showNewConversationMenu = false
+                            newConversationName = ""
+                            selectedMemberIds = emptySet()
+                            showChannelCreator = true
+                        },
+                    )
+                }
             }
         },
     ) { padding ->
@@ -255,6 +298,100 @@ fun OptimizedChatListScreen(
             }
         }
         }
+        val creatingChannel = showChannelCreator
+        if (showGroupCreator || showChannelCreator) {
+            val memberOptions = MockData.discoverableContacts
+            val kindLabel = if (creatingChannel) "channel" else "group"
+            AlertDialog(
+                onDismissRequest = {
+                    showGroupCreator = false
+                    showChannelCreator = false
+                },
+                title = { Text(if (creatingChannel) "Create channel" else "Create group") },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = newConversationName,
+                            onValueChange = { newConversationName = it.take(48) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(if (creatingChannel) "Channel name" else "Group name") },
+                            singleLine = true,
+                        )
+                        Text(
+                            if (creatingChannel) "Choose initial subscribers" else "Choose group members",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().height(250.dp),
+                        ) {
+                            items(memberOptions, key = { it.id }) { user ->
+                                val selected = user.id in selectedMemberIds
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Checkbox(
+                                        checked = selected,
+                                        onCheckedChange = { checked ->
+                                            selectedMemberIds = if (checked) selectedMemberIds + user.id
+                                                else selectedMemberIds - user.id
+                                        },
+                                    )
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                            .clickable {
+                                                selectedMemberIds = if (selected) selectedMemberIds - user.id
+                                                    else selectedMemberIds + user.id
+                                            }
+                                            .padding(vertical = 7.dp),
+                                    ) {
+                                        Text(user.displayName, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            "@${user.username}",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Text(
+                            "This creates a local prototype ${kindLabel}; it is not yet synced to other devices.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = newConversationName.trim().length >= 2 && selectedMemberIds.isNotEmpty(),
+                        onClick = {
+                            val created = DemoMessagingRepository.createGroupOrChannel(
+                                title = newConversationName,
+                                memberIds = selectedMemberIds.toList(),
+                                isChannel = creatingChannel,
+                            )
+                            showGroupCreator = false
+                            showChannelCreator = false
+                            selectedMemberIds = emptySet()
+                            newConversationName = ""
+                            onOpenChat(created.id)
+                        },
+                    ) { Text(if (creatingChannel) "Create channel" else "Create group") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showGroupCreator = false
+                        showChannelCreator = false
+                    }) { Text("Cancel") }
+                },
+            )
+        }
+
         selectedChat?.let { chat ->
             AlertDialog(
                 onDismissRequest = { selectedChat = null },

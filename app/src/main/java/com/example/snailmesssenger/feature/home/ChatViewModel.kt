@@ -3,6 +3,7 @@ package com.example.snailmesssenger.feature.home
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.snailmesssenger.data.model.ConversationKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,8 @@ data class ChatUiState(
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
     val isMuted: Boolean = false,
+    val kind: ConversationKind = ConversationKind.DIRECT,
+    val memberCount: Int = 1,
 )
 
 @Immutable

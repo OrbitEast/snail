@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.snailmesssenger.data.model.Conversation
+import com.example.snailmesssenger.data.model.ConversationKind
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -194,13 +195,15 @@ private fun toChatUiStates(conversations: List<Conversation>): List<ChatUiState>
             }
             ChatUiState(
                 id = conversation.id,
-                title = conversation.peer.displayName,
+                title = conversation.title ?: conversation.peer.displayName,
                 username = "@${conversation.peer.username}",
                 lastMessage = if (last?.isOutgoing == true) "You: $rawPreview" else rawPreview,
                 timestamp = last?.let { formatChatTimestamp(it.timestampMs) }.orEmpty(),
                 unreadCount = conversation.unreadCount,
-                isOnline = conversation.peer.isOnline,
-                avatarSeed = conversation.peer.id,
+                isOnline = conversation.kind == ConversationKind.DIRECT && conversation.peer.isOnline,
+                avatarSeed = conversation.id,
+                kind = conversation.kind,
+                memberCount = if (conversation.participantIds.isEmpty()) 1 else conversation.participantIds.size,
                 isOutgoing = last?.isOutgoing == true,
                 isPinned = conversation.isPinned,
                 isArchived = conversation.isArchived,

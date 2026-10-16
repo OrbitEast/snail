@@ -37,12 +37,15 @@ import androidx.compose.ui.unit.dp
 import com.example.snailmesssenger.core.designsystem.SnailAvatar
 import com.example.snailmesssenger.core.designsystem.SnailSectionRow
 import com.example.snailmesssenger.core.designsystem.Spacing
+import com.example.snailmesssenger.data.model.ConversationKind
 import com.example.snailmesssenger.data.model.User
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PeerProfileSheet(
     peer: User,
+    kind: ConversationKind = ConversationKind.DIRECT,
+    memberCount: Int = 1,
     onDismiss: () -> Unit,
     onCallClick: () -> Unit,
 ) {
@@ -76,7 +79,7 @@ fun PeerProfileSheet(
                 displayId = peer.id,
                 displayName = peer.displayName,
                 size = 80,
-                showOnlineIndicator = true,
+                showOnlineIndicator = kind == ConversationKind.DIRECT,
                 isOnline = peer.isOnline,
             )
             Spacer(Modifier.height(Spacing.md))
@@ -89,9 +92,13 @@ fun PeerProfileSheet(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = if (peer.isOnline) "online" else "last seen recently",
+                text = when (kind) {
+                    ConversationKind.DIRECT -> if (peer.isOnline) "online" else "last seen recently"
+                    ConversationKind.GROUP -> "$memberCount members"
+                    ConversationKind.CHANNEL -> "$memberCount subscribers"
+                },
                 style = MaterialTheme.typography.labelMedium,
-                color = if (peer.isOnline) {
+                color = if (kind == ConversationKind.DIRECT && peer.isOnline) {
                     com.example.snailmesssenger.core.designsystem.SuccessGreen
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -106,12 +113,14 @@ fun PeerProfileSheet(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ProfileActionButton(
-                    icon = Icons.Default.Call,
-                    label = "Call",
-                    onClick = onCallClick,
-                )
-                Spacer(Modifier.width(Spacing.xl))
+                if (kind == ConversationKind.DIRECT) {
+                    ProfileActionButton(
+                        icon = Icons.Default.Call,
+                        label = "Call",
+                        onClick = onCallClick,
+                    )
+                    Spacer(Modifier.width(Spacing.xl))
+                }
                 ProfileActionButton(
                     icon = Icons.Default.Notifications,
                     label = if (notificationsMuted) "Unmute" else "Mute",
@@ -139,15 +148,27 @@ fun PeerProfileSheet(
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
             // Keep this profile truthful to SNAIL's text-first one-to-one scope.
-            SnailSectionHeading(text = "Conversation")
+            SnailSectionHeading(text = if (kind == ConversationKind.CHANNEL) "Channel" else "Conversation")
             SnailSectionRow(
-                title = "Message history",
-                subtitle = "Text messages in this conversation",
+                title = when (kind) {
+                    ConversationKind.DIRECT -> "Message history"
+                    ConversationKind.GROUP -> "Group messages"
+                    ConversationKind.CHANNEL -> "Channel posts"
+                },
+                subtitle = when (kind) {
+                    ConversationKind.DIRECT -> "Text messages in this conversation"
+                    ConversationKind.GROUP -> "$memberCount participants in this local group"
+                    ConversationKind.CHANNEL -> "$memberCount subscribers in this local channel"
+                },
                 icon = null,
             )
             SnailSectionRow(
                 title = "Privacy",
-                subtitle = "One-to-one conversation",
+                subtitle = when (kind) {
+                    ConversationKind.DIRECT -> "One-to-one conversation"
+                    ConversationKind.GROUP -> "Group conversation · local prototype"
+                    ConversationKind.CHANNEL -> "Broadcast-style channel · local prototype"
+                },
                 icon = Icons.Default.Block,
             )
         }

@@ -9,7 +9,14 @@ data class User(
     val isOnline: Boolean = false,
 )
 
-/** A one-to-one conversation with a single peer. */
+/** The local conversation mode. */
+enum class ConversationKind {
+    DIRECT,
+    GROUP,
+    CHANNEL,
+}
+
+/** A conversation with either a single peer or a locally managed group/channel. */
 data class Conversation(
     val id: String,
     val peer: User,
@@ -18,6 +25,10 @@ data class Conversation(
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
     val isMuted: Boolean = false,
+    val kind: ConversationKind = ConversationKind.DIRECT,
+    val title: String? = null,
+    val participantIds: List<String> = emptyList(),
+    val createdBy: String? = null,
 )
 
 /** A single chat message. */

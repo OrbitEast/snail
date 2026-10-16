@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.example.snailmesssenger.data.model.Conversation
+import com.example.snailmesssenger.data.model.ConversationKind
 import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.model.MockData
 import com.example.snailmesssenger.data.model.User
@@ -34,6 +35,7 @@ interface MessagingRepository {
     fun setConversationPinned(conversationId: String, pinned: Boolean)
     fun setConversationArchived(conversationId: String, archived: Boolean)
     fun setConversationMuted(conversationId: String, muted: Boolean)
+    fun createGroupOrChannel(title: String, memberIds: List<String>, isChannel: Boolean): Conversation
     fun startConversationWith(peerId: String): Conversation
     fun markConversationRead(conversationId: String)
 }
@@ -292,6 +294,50 @@ object DemoMessagingRepository : MessagingRepository {
         persistConversations()
     }
 
+    override fun createGroupOrChannel(
+        title: String,
+        memberIds: List<String>,
+        isChannel: Boolean,
+    ): Conversation {
+        val normalizedTitle = title.trim()
+        require(normalizedTitle.length in 2..48) { "Name must be between 2 and 48 characters." }
+        val knownUsers = (MockData.discoverableContacts + MockData.conversations.map { it.peer })
+            .distinctBy { it.id }
+        val requestedIds = memberIds.distinct()
+        require(requestedIds.isNotEmpty()) { "Choose at least one member." }
+        val resolvedIds = requestedIds.filter { requestedId ->
+            knownUsers.any { it.id == requestedId }
+        }
+        require(resolvedIds.size == requestedIds.size) { "One or more selected members could not be found." }
+
+        val groupId = "c${java.util.UUID.randomUUID()}"
+        val titleSlug = normalizedTitle.lowercase()
+            .replace(Regex("[^a-z0-9]+"), "_")
+            .trim('_')
+            .take(18)
+            .ifBlank { "snail_chat" }
+        val kind = if (isChannel) ConversationKind.CHANNEL else ConversationKind.GROUP
+        val peer = User(
+            id = groupId,
+            username = "${titleSlug}_${java.util.UUID.randomUUID().toString().take(5)}",
+            displayName = normalizedTitle,
+            bio = if (isChannel) "SNAIL channel" else "SNAIL group",
+            isOnline = false,
+        )
+        val conversation = Conversation(
+            id = groupId,
+            peer = peer,
+            kind = kind,
+            title = normalizedTitle,
+            participantIds = (listOf("me") + resolvedIds).distinct(),
+            createdBy = "me",
+        )
+        mutableConversations.add(0, conversation)
+        publishChanges()
+        persistConversations()
+        return conversation
+    }
+
     override fun startConversationWith(peerId: String): Conversation {
         mutableConversations.firstOrNull { it.peer.id == peerId }?.let { existing ->
             if (existing.isArchived) setConversationArchived(existing.id, false)
@@ -358,6 +404,10 @@ object DemoMessagingRepository : MessagingRepository {
                     .put("isPinned", conversation.isPinned)
                     .put("isArchived", conversation.isArchived)
                     .put("isMuted", conversation.isMuted)
+                    .put("kind", conversation.kind.name)
+                    .put("title", conversation.title ?: JSONObject.NULL)
+                    .put("participantIds", JSONArray(conversation.participantIds))
+                    .put("createdBy", conversation.createdBy ?: JSONObject.NULL)
                     .put("messages", messages),
             )
         }
@@ -414,6 +464,14 @@ object DemoMessagingRepository : MessagingRepository {
                         isPinned = item.optBoolean("isPinned", false),
                         isArchived = item.optBoolean("isArchived", false),
                         isMuted = item.optBoolean("isMuted", false),
+                        kind = runCatching {
+                            ConversationKind.valueOf(item.optString("kind", "DIRECT"))
+                        }.getOrDefault(ConversationKind.DIRECT),
+                        title = item.optString("title").takeUnless { it.isBlank() || it == "null" },
+                        participantIds = item.optJSONArray("participantIds")?.let { ids ->
+                            buildList { for (memberIndex in 0 until ids.length()) add(ids.optString(memberIndex)) }
+                        }.orEmpty(),
+                        createdBy = item.optString("createdBy").takeUnless { it.isBlank() || it == "null" },
                     ),
                 )
             }

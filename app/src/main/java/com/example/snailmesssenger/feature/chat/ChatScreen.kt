@@ -123,6 +123,7 @@ import coil.compose.AsyncImage
 import com.example.snailmesssenger.core.designsystem.SnailAvatar
 import com.example.snailmesssenger.core.designsystem.Spacing
 import com.example.snailmesssenger.data.model.Conversation
+import com.example.snailmesssenger.data.model.ConversationKind
 import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import com.example.snailmesssenger.feature.theme.LocalChatBubbleRadius
@@ -391,23 +392,27 @@ fun ChatScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             SnailAvatar(
-                                displayId = conversation.peer.id,
-                                displayName = conversation.peer.displayName,
+                                displayId = if (conversation.kind == ConversationKind.DIRECT) conversation.peer.id else conversation.id,
+                                displayName = conversation.title ?: conversation.peer.displayName,
                                 size = 42,
                             )
                             Spacer(Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = conversation.peer.displayName,
+                                    text = conversation.title ?: conversation.peer.displayName,
                                     style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.5.sp),
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    text = if (conversation.peer.isOnline) "online" else "last seen recently",
+                                    text = when (conversation.kind) {
+                                        ConversationKind.DIRECT -> if (conversation.peer.isOnline) "online" else "last seen recently"
+                                        ConversationKind.GROUP -> "${conversation.participantIds.size} members"
+                                        ConversationKind.CHANNEL -> "${conversation.participantIds.size} subscribers"
+                                    },
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = if (conversation.peer.isOnline) ReadCheckmarkGreen
+                                    color = if (conversation.kind == ConversationKind.DIRECT && conversation.peer.isOnline) ReadCheckmarkGreen
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.SemiBold,
                                 )
@@ -420,11 +425,13 @@ fun ChatScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = onVoiceCall) {
-                            Icon(Icons.Default.Call, contentDescription = "Start voice call")
-                        }
-                        IconButton(onClick = onVideoCall) {
-                            Icon(Icons.Default.Videocam, contentDescription = "Start video call")
+                        if (conversation.kind == ConversationKind.DIRECT) {
+                            IconButton(onClick = onVoiceCall) {
+                                Icon(Icons.Default.Call, contentDescription = "Start voice call")
+                            }
+                            IconButton(onClick = onVideoCall) {
+                                Icon(Icons.Default.Videocam, contentDescription = "Start video call")
+                            }
                         }
                         IconButton(onClick = {
                             if (searchVisible) {
@@ -1058,6 +1065,8 @@ fun ChatScreen(
     if (showProfileSheet) {
         PeerProfileSheet(
             peer = conversation.peer,
+            kind = conversation.kind,
+            memberCount = if (conversation.participantIds.isEmpty()) 1 else conversation.participantIds.size,
             onDismiss = { showProfileSheet = false },
             onCallClick = { showProfileSheet = false; onVoiceCall() },
         )
