@@ -10,11 +10,12 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 - Groups and broadcast-style channels can be created on-device; member/subscriber lists can be edited and persist locally, but do not synchronize with remote members.
 - Opening a chat clears its local unread count. Chat overflow supports persistent pin/mute, plain-text export via Android Sharesheet, and confirmed local history clearing. Individual message deletion also requires confirmation and clears stale pinned-message references.
 - The signed-in local demo account is restored after app restart; local conversations and drafts are isolated by account, and logout clears that session.
+- Conversation JSON, drafts, and scheduled message payloads are encrypted at rest with an Android Keystore AES-GCM key; Android app-data backup is disabled. This is not end-to-end encryption.
 - Select up to 10 photos/videos or documents per composer action, add a caption before sending, tap images for full-screen preview, or open video/files/audio in another installed app.
 - Record voice-message audio locally with a microphone permission prompt, a live duration counter, and a dedicated in-app private-storage file URI.
 - Invite links can be shared through Android's system Sharesheet.
 - Local message/attachment metadata persistence, adjustable chat wallpaper, light/dark modes, and responsive navigation.
-- Scheduled messages use persistent Android WorkManager jobs and are appended to the matching account's local conversation at the due time; they are not delivered to a remote recipient and are discarded if that account is no longer the active local session. Android power-saving can delay execution.
+- Scheduled messages use persistent Android WorkManager jobs with encrypted payloads and are appended to the matching account's local conversation at the due time; they are not delivered to a remote recipient and are discarded if that account is no longer the active local session. Android power-saving can delay execution.
 - Voice/video call screens remain prototypes and do not establish real network calls. Voice messages are recorded and stored locally; they are not uploaded or delivered to another user.
 
 ## Important limitations

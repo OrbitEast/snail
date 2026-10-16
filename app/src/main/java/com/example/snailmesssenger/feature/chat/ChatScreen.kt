@@ -1307,7 +1307,7 @@ fun ChatScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = scheduledMessageText,
-                        onValueChange = { scheduledMessageText = it.take(4_000) },
+                        onValueChange = { scheduledMessageText = it.take(1_500) },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Message") },
                         placeholder = { Text("Write the message to send later") },
@@ -1350,7 +1350,7 @@ fun ChatScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        "This prototype schedules a local message on this device. Android may run it a little later than the selected time.",
+                        "This prototype schedules a local message on this device. The payload is encrypted in local storage; Android may run it a little later than the selected time.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )

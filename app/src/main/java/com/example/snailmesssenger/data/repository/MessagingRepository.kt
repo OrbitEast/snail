@@ -10,6 +10,7 @@ import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.model.MessageDraft
 import com.example.snailmesssenger.data.model.MockData
 import com.example.snailmesssenger.data.model.User
+import com.example.snailmesssenger.data.security.LocalVault
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -109,7 +110,9 @@ object DemoMessagingRepository : MessagingRepository {
         )
 
         val saved = store.getString(KEY_CONVERSATIONS, null)
-        val parsed = saved?.let { runCatching { deserializeConversations(JSONArray(it)) }.getOrNull() }
+        val parsed = saved?.let {
+            runCatching { deserializeConversations(JSONArray(LocalVault.decrypt(it))) }.getOrNull()
+        }
         if (parsed != null) {
             mutableConversations.clear()
             mutableConversations.addAll(parsed)
@@ -146,7 +149,7 @@ object DemoMessagingRepository : MessagingRepository {
             }
             legacyValues.forEach { (key, value) ->
                 if (key.startsWith(DRAFT_PREFIX) && value is String) {
-                    editor.putString(key, value)
+                    editor.putString(key, LocalVault.encrypt(LocalVault.decrypt(value)))
                 }
             }
             editor.apply()
@@ -550,7 +553,11 @@ object DemoMessagingRepository : MessagingRepository {
 
     override fun getDraft(conversationId: String): MessageDraft {
         ensureAccountScope()
-        val raw = preferences?.getString("$DRAFT_PREFIX$conversationId", null) ?: return MessageDraft()
+        val storedValue = preferences?.getString("$DRAFT_PREFIX$conversationId", null) ?: return MessageDraft()
+        val raw = runCatching { LocalVault.decrypt(storedValue) }.getOrNull() ?: return MessageDraft()
+        if (!LocalVault.isEncrypted(storedValue)) {
+            preferences?.edit()?.putString("$DRAFT_PREFIX$conversationId", LocalVault.encrypt(raw))?.apply()
+        }
         val json = runCatching { JSONObject(raw) }.getOrNull() ?: return MessageDraft()
         return MessageDraft(
             text = json.optString("text"),
@@ -572,7 +579,7 @@ object DemoMessagingRepository : MessagingRepository {
             .put("text", draft.text)
             .put("replyToMessageId", draft.replyToMessageId ?: JSONObject.NULL)
             .put("replyToText", draft.replyToText ?: JSONObject.NULL)
-        preferences?.edit()?.putString(key, json.toString())?.apply()
+        preferences?.edit()?.putString(key, LocalVault.encrypt(json.toString()))?.apply()
     }
 
     override fun clearDraft(conversationId: String) {
@@ -667,7 +674,7 @@ object DemoMessagingRepository : MessagingRepository {
                     .put("messages", messages),
             )
         }
-        preferences?.edit()?.putString(KEY_CONVERSATIONS, array.toString())?.apply()
+        preferences?.edit()?.putString(KEY_CONVERSATIONS, LocalVault.encrypt(array.toString()))?.apply()
     }
 
     private fun deserializeConversations(array: JSONArray): List<Conversation> =

@@ -10,6 +10,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.example.snailmesssenger.data.repository.DemoAuthRepository
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
+import com.example.snailmesssenger.data.security.LocalVault
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -30,11 +31,13 @@ class ScheduledMessageWorker(
 
     override suspend fun doWork(): Result {
         val conversationId = inputData.getString(KEY_CONVERSATION_ID) ?: return Result.failure()
-        val text = inputData.getString(KEY_TEXT)?.trim().orEmpty()
+        val text = runCatching { LocalVault.decrypt(inputData.getString(KEY_TEXT).orEmpty()) }
+            .getOrNull()?.trim().orEmpty()
         val scheduledId = inputData.getString(KEY_SCHEDULED_ID) ?: id.toString()
         val scheduledAccountId = inputData.getString(KEY_ACCOUNT_ID) ?: "guest"
         val replyToMessageId = inputData.getString(KEY_REPLY_TO_MESSAGE_ID)
         val replyToText = inputData.getString(KEY_REPLY_TO_TEXT)
+            ?.let { runCatching { LocalVault.decrypt(it) }.getOrNull() }
         if (text.isBlank()) return Result.failure()
 
         return try {
@@ -77,18 +80,18 @@ class ScheduledMessageWorker(
         ): UUID {
             val normalizedText = text.trim()
             require(normalizedText.isNotEmpty()) { "Message cannot be empty." }
-            require(normalizedText.length <= 4_000) { "Scheduled messages are limited to 4,000 characters." }
+            require(normalizedText.length <= 1_500) { "Scheduled messages are limited to 1,500 characters." }
             require(scheduledAtMs > System.currentTimeMillis()) { "Choose a future date and time." }
 
             val scheduledId = UUID.randomUUID().toString()
             val data = workDataOf(
                 KEY_CONVERSATION_ID to conversationId,
-                KEY_TEXT to normalizedText,
+                KEY_TEXT to LocalVault.encrypt(normalizedText),
                 KEY_SCHEDULED_ID to scheduledId,
                 KEY_SCHEDULED_AT to scheduledAtMs,
                 KEY_ACCOUNT_ID to (DemoAuthRepository.currentUser?.id ?: "guest"),
                 KEY_REPLY_TO_MESSAGE_ID to replyToMessageId,
-                KEY_REPLY_TO_TEXT to replyToText?.take(2_000),
+                KEY_REPLY_TO_TEXT to replyToText?.take(300)?.let(LocalVault::encrypt),
             )
             val request = OneTimeWorkRequestBuilder<ScheduledMessageWorker>()
                 .setInputData(data)
@@ -115,7 +118,9 @@ class ScheduledMessageWorker(
                     val requestAccountId = data.getString(KEY_ACCOUNT_ID) ?: "guest"
                     val currentAccountId = DemoAuthRepository.currentUser?.id ?: "guest"
                     if (requestAccountId != currentAccountId) return@mapNotNull null
-                    val text = data.getString(KEY_TEXT) ?: return@mapNotNull null
+                    val text = data.getString(KEY_TEXT)
+                        ?.let { runCatching { LocalVault.decrypt(it) }.getOrNull() }
+                        ?: return@mapNotNull null
                     val scheduledId = data.getString(KEY_SCHEDULED_ID) ?: info.id.toString()
                     val scheduledAt = data.getLong(KEY_SCHEDULED_AT, 0L)
                     if (scheduledAt <= 0L) return@mapNotNull null
