@@ -83,6 +83,7 @@ fun DeepSettingsScreen(
 
             item { Section("Data and Storage") }
             item { StorageCard(state.cacheProgress) }
+            item { RowItem(Icons.Default.Storage, "Storage Usage", "Messages and local app data", onOpenDataStorage) }
             item {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Button(onClick = viewModel::startClearCache, enabled = !state.isClearingCache) {
