@@ -247,6 +247,21 @@ fun OptimizedChatListScreen(
                         )
                     }
                 }
+                if (state.query.isNotBlank() && state.matchingMessages.isNotEmpty()) {
+                    item(key = "header-matching-messages") {
+                        SectionHeader("MESSAGES", showFloatingHeader)
+                    }
+                    items(
+                        items = state.matchingMessages,
+                        key = { result -> "message-${result.conversationId}-${result.message.id}" },
+                    ) { result ->
+                        MessageSearchResultRow(
+                            result = result,
+                            query = state.query,
+                            onClick = { onOpenChat(result.conversationId) },
+                        )
+                    }
+                }
                 if (visibleSnailContacts.isNotEmpty()) {
                     item(key = "header-snail-contacts") { SectionHeader("CONTACTS ON SNAIL", showFloatingHeader) }
                     visibleSnailContacts.groupBy { it.displayName.firstOrNull()?.uppercaseChar() ?: '#' }
@@ -283,7 +298,9 @@ fun OptimizedChatListScreen(
                             }
                         }
                 }
-                if (visibleChats.isEmpty() && visibleSnailContacts.isEmpty() && visibleInviteContacts.isEmpty() && state.query.isNotBlank()) {
+                if (visibleChats.isEmpty() && state.matchingMessages.isEmpty() &&
+                    visibleSnailContacts.isEmpty() && visibleInviteContacts.isEmpty() && state.query.isNotBlank()
+                ) {
                     item(key = "empty-search") {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -421,6 +438,88 @@ fun OptimizedChatListScreen(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun MessageSearchResultRow(
+    result: MessageSearchResult,
+    query: String,
+    onClick: () -> Unit,
+) {
+    val message = result.message
+    val preview = when {
+        message.pollQuestion != null -> "Poll: ${message.pollQuestion}"
+        message.attachmentUri != null && message.attachmentMimeType.orEmpty().startsWith("image/") ->
+            message.text.ifBlank { "Photo" }
+        message.attachmentUri != null && message.attachmentMimeType.orEmpty().startsWith("video/") ->
+            message.text.ifBlank { "Video" }
+        message.attachmentUri != null && message.attachmentMimeType.orEmpty().startsWith("audio/") ->
+            "Voice message"
+        message.attachmentUri != null -> message.text.ifBlank { message.attachmentName ?: "Attachment" }
+        else -> message.text
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.size(46.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    result.conversationTitle.split(" ").filter(String::isNotBlank).take(2)
+                        .joinToString("") { it.first().uppercase() },
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        result.conversationTitle,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        result.timestamp,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (message.isOutgoing) "You: " else "",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    HighlightedSearchText(
+                        text = preview,
+                        query = query,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2,
+                    )
+                }
+            }
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 74.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.40f),
+        )
     }
 }
 

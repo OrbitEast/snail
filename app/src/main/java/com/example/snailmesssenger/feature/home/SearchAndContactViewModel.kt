@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.snailmesssenger.data.model.Conversation
 import com.example.snailmesssenger.data.model.ConversationKind
+import com.example.snailmesssenger.data.model.Message
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -34,10 +35,19 @@ data class SearchContact(
 )
 
 @Immutable
+data class MessageSearchResult(
+    val conversationId: String,
+    val conversationTitle: String,
+    val message: Message,
+    val timestamp: String,
+)
+
+@Immutable
 data class SearchAndContactUiState(
     val query: String = "",
     val chats: List<ChatUiState> = emptyList(),
     val matchingChats: List<ChatUiState> = emptyList(),
+    val matchingMessages: List<MessageSearchResult> = emptyList(),
     val matchingSnailContacts: List<SearchContact> = emptyList(),
     val matchingInviteContacts: List<SearchContact> = emptyList(),
     val allSnailContacts: List<SearchContact> = emptyList(),
@@ -49,6 +59,7 @@ data class SearchAndContactUiState(
 private data class SearchIndexResult(
     val allChats: List<ChatUiState>,
     val chats: List<ChatUiState>,
+    val messages: List<MessageSearchResult>,
     val snailContacts: List<SearchContact>,
     val inviteContacts: List<SearchContact>,
 )
@@ -113,6 +124,27 @@ class SearchAndContactViewModel : ViewModel() {
                     chat.lastMessage.contains(rawQuery.trim(), ignoreCase = true) ||
                     chat.username.removePrefix("@").contains(term, ignoreCase = true)
             }
+            val messageMatches = if (term.isBlank()) {
+                emptyList()
+            } else {
+                conversations.flatMap { conversation ->
+                    conversation.messages
+                        .filter { message ->
+                            message.text.contains(rawQuery.trim(), ignoreCase = true) ||
+                                message.pollQuestion.orEmpty().contains(rawQuery.trim(), ignoreCase = true) ||
+                                message.pollOptions.any { it.contains(rawQuery.trim(), ignoreCase = true) } ||
+                                message.attachmentName.orEmpty().contains(rawQuery.trim(), ignoreCase = true)
+                        }
+                        .map { message ->
+                            MessageSearchResult(
+                                conversationId = conversation.id,
+                                conversationTitle = conversation.title ?: conversation.peer.displayName,
+                                message = message,
+                                timestamp = formatChatTimestamp(message.timestampMs),
+                            )
+                        }
+                }.sortedByDescending { it.message.timestampMs }.take(100)
+            }
             val contactMatches = if (term.isBlank()) contacts else contacts.filter { contact ->
                 contact.displayName.contains(rawQuery.trim(), ignoreCase = true) ||
                     contact.username.removePrefix("@").contains(term, ignoreCase = true) ||
@@ -121,6 +153,7 @@ class SearchAndContactViewModel : ViewModel() {
             SearchIndexResult(
                 allChats = chats,
                 chats = chatMatches,
+                messages = messageMatches,
                 snailContacts = contactMatches.filter { it.isRegistered },
                 inviteContacts = contactMatches.filterNot { it.isRegistered },
             )
@@ -131,6 +164,7 @@ class SearchAndContactViewModel : ViewModel() {
         initialValue = SearchIndexResult(
             allChats = toChatUiStates(DemoMessagingRepository.getConversations()),
             chats = toChatUiStates(DemoMessagingRepository.getConversations()),
+            messages = emptyList(),
             snailContacts = emptyList(),
             inviteContacts = emptyList(),
         ),
@@ -146,6 +180,7 @@ class SearchAndContactViewModel : ViewModel() {
             query = currentQuery,
             chats = results.allChats,
             matchingChats = results.chats,
+            matchingMessages = results.messages,
             matchingSnailContacts = results.snailContacts,
             matchingInviteContacts = results.inviteContacts,
             allSnailContacts = contacts.filter { it.isRegistered },

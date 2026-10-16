@@ -5,7 +5,7 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 ## Current app surfaces
 
 - Username/password sign-up and sign-in for device-local demo accounts (passwords are salted and PBKDF2-hashed).
-- One-to-one chats plus local group/channel creation, search, unread/pinned/archive filters, contacts lookup, theme and profile settings.
+- One-to-one chats plus local group/channel creation, search across conversations and message history, unread/pinned/archive filters, contacts lookup, theme and profile settings.
 - Text messages stored on the device, editable/deletable outgoing text, reply quotes, forwarding between local conversations, emoji reactions, local polls with vote counts, and message search.
 - Groups and broadcast-style channels can be created on-device and their membership metadata persists locally; they do not yet communicate with remote members.
 - Opening a chat clears its local unread count. Chat overflow supports persistent pin/mute, plain-text export via Android Sharesheet, and confirmed local history clearing.
