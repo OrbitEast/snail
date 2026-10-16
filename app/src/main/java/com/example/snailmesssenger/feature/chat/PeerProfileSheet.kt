@@ -26,10 +26,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,11 +42,12 @@ fun PeerProfileSheet(
     peer: User,
     kind: ConversationKind = ConversationKind.DIRECT,
     memberCount: Int = 1,
+    isMuted: Boolean = false,
+    onToggleMute: () -> Unit = {},
     onDismiss: () -> Unit,
     onCallClick: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var notificationsMuted by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -123,8 +120,8 @@ fun PeerProfileSheet(
                 }
                 ProfileActionButton(
                     icon = Icons.Default.Notifications,
-                    label = if (notificationsMuted) "Unmute" else "Mute",
-                    onClick = { notificationsMuted = !notificationsMuted },
+                    label = if (isMuted) "Unmute" else "Mute",
+                    onClick = onToggleMute,
                 )
             }
 

@@ -335,6 +335,12 @@ fun ChatScreen(
         }
     }
 
+    LaunchedEffect(conversationId, conversation.unreadCount) {
+        if (conversation.unreadCount > 0) {
+            DemoMessagingRepository.markConversationRead(conversationId)
+        }
+    }
+
     LaunchedEffect(conversation.messages) {
         messages = conversation.messages
     }
@@ -1071,6 +1077,10 @@ fun ChatScreen(
             peer = conversation.peer,
             kind = conversation.kind,
             memberCount = if (conversation.participantIds.isEmpty()) 1 else conversation.participantIds.size,
+            isMuted = conversation.isMuted,
+            onToggleMute = {
+                DemoMessagingRepository.setConversationMuted(conversation.id, !conversation.isMuted)
+            },
             onDismiss = { showProfileSheet = false },
             onCallClick = { showProfileSheet = false; onVoiceCall() },
         )
