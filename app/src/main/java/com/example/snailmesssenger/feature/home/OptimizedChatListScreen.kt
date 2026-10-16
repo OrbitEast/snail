@@ -159,6 +159,9 @@ fun OptimizedChatListScreen(
         val folderFilteredChats = remember(selectedFolder, state.chats) {
             when (selectedFolder) {
                 "Unread" -> state.chats.filter { !it.isArchived && it.unreadCount > 0 }
+                "Personal" -> state.chats.filter { !it.isArchived && it.kind == ConversationKind.DIRECT }
+                "Groups" -> state.chats.filter { !it.isArchived && it.kind == ConversationKind.GROUP }
+                "Channels" -> state.chats.filter { !it.isArchived && it.kind == ConversationKind.CHANNEL }
                 "Pinned" -> state.chats.filter { !it.isArchived && it.isPinned }
                 "Archived" -> state.chats.filter { it.isArchived }
                 else -> state.chats.filterNot { it.isArchived }
@@ -175,10 +178,13 @@ fun OptimizedChatListScreen(
                     modifier = Modifier.fillMaxWidth().animateContentSize().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    listOf("All", "Unread", "Pinned", "Archived").forEach { folder ->
+                    listOf("All", "Unread", "Personal", "Groups", "Channels", "Pinned", "Archived").forEach { folder ->
                         val isSelected = selectedFolder == folder
                         val unreadInFolder = when(folder) {
                             "Unread" -> state.chats.filterNot { it.isArchived }.sumOf { it.unreadCount }
+                            "Personal" -> state.chats.filter { !it.isArchived && it.kind == ConversationKind.DIRECT }.sumOf { it.unreadCount }
+                            "Groups" -> state.chats.filter { !it.isArchived && it.kind == ConversationKind.GROUP }.sumOf { it.unreadCount }
+                            "Channels" -> state.chats.filter { !it.isArchived && it.kind == ConversationKind.CHANNEL }.sumOf { it.unreadCount }
                             "Pinned" -> state.chats.count { it.isPinned && !it.isArchived }
                             "Archived" -> state.chats.count { it.isArchived }
                             else -> 0
