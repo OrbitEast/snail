@@ -319,6 +319,8 @@ object DemoMessagingRepository : MessagingRepository {
         if (index < 0) return
         val updated = mutableConversations[index].copy(
             messages = mutableConversations[index].messages.filterNot { it.id == messageId },
+            pinnedMessageId = if (mutableConversations[index].pinnedMessageId == messageId) null
+                else mutableConversations[index].pinnedMessageId,
         )
         mutableConversations[index] = updated
         publishChanges()
@@ -515,7 +517,9 @@ object DemoMessagingRepository : MessagingRepository {
         mutableConversations[index] = mutableConversations[index].copy(
             messages = emptyList(),
             unreadCount = 0,
+            pinnedMessageId = null,
         )
+        clearDraft(conversationId)
         publishChanges()
         persistConversations()
     }

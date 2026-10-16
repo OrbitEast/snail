@@ -16,7 +16,8 @@
 - [ ] Record a voice message, cancel it by navigating away while recording, and verify the latest recorder is stopped/released and no partial recording is sent.
 - [ ] Test light, dark, and system themes, chat wallpapers, and bottom navigation across small and large screens.
 - [ ] Open an unread chat and verify its inbox badge clears; mute/unmute a chat from the row, profile sheet and chat overflow; pin/unpin in the chat overflow.
-- [ ] Export a chat via Android Sharesheet, then clear history and confirm the empty conversation persists after relaunch.
+- [ ] Export a chat via Android Sharesheet, then clear history and confirm the empty conversation persists after relaunch and its pinned banner disappears.
+- [ ] Delete a pinned message; confirm the delete dialog appears and the pinned banner is removed.
 - [ ] Exercise voice/video call screens as UI prototypes; verify no claim of real remote connectivity.
 - [ ] Test URI permissions after Android process death and app restart on API 28+ devices.
 

@@ -220,6 +220,7 @@ fun ChatScreen(
     var pollQuestion by remember { mutableStateOf("") }
     var pollOptions by remember { mutableStateOf(listOf("", "")) }
     var selectedMessage by remember { mutableStateOf<Message?>(null) }
+    var messagePendingDeletion by remember { mutableStateOf<Message?>(null) }
     var forwardingMessage by remember { mutableStateOf<Message?>(null) }
     var editingMessageId by remember { mutableStateOf<String?>(null) }
     var highlightedMessageId by remember(conversationId) { mutableStateOf<String?>(null) }
@@ -1228,6 +1229,31 @@ fun ChatScreen(
         )
     }
 
+    messagePendingDeletion?.let { message ->
+        AlertDialog(
+            onDismissRequest = { messagePendingDeletion = null },
+            title = { Text("Delete message?") },
+            text = {
+                Text(
+                    "This removes the message from this device only. " +
+                        "It cannot delete a copy stored on another device or remote server.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        DemoMessagingRepository.deleteMessage(conversationId, message.id)
+                        messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+                        messagePendingDeletion = null
+                    },
+                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { messagePendingDeletion = null }) { Text("Cancel") }
+            },
+        )
+    }
+
     if (showClearHistoryConfirm) {
         AlertDialog(
             onDismissRequest = { showClearHistoryConfirm = false },
@@ -1537,11 +1563,10 @@ fun ChatScreen(
                     }
                     TextButton(
                         onClick = {
-                            DemoMessagingRepository.deleteMessage(conversationId, message.id)
-                            messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+                            messagePendingDeletion = message
                             selectedMessage = null
                         },
-                    ) { Text("Delete from this device") }
+                    ) { Text("Delete from this device", color = MaterialTheme.colorScheme.error) }
                 }
             },
             confirmButton = {
