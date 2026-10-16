@@ -7,7 +7,7 @@
 - [ ] Sign in/out and confirm local account persistence.
 - [ ] Send text, edit your own text, delete a message, add/remove a reaction, reply, forward between local chats, create/vote in a poll, and search within a chat.
 - [ ] Pick multiple photos/videos and documents (up to 10 per action), add a caption, and verify attachment ordering and persistence.
-- [ ] Record a voice message, cancel it by navigating away while recording, and verify no partial recording is sent.
+- [ ] Record a voice message, cancel it by navigating away while recording, and verify the latest recorder is stopped/released and no partial recording is sent.
 - [ ] Test light, dark, and system themes, chat wallpapers, and bottom navigation across small and large screens.
 - [ ] Open an unread chat and verify its inbox badge clears; mute/unmute a chat from the row, profile sheet and chat overflow; pin/unpin in the chat overflow.
 - [ ] Export a chat via Android Sharesheet, then clear history and confirm the empty conversation persists after relaunch.

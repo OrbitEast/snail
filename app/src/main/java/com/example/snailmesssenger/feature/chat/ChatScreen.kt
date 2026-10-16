@@ -85,6 +85,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -311,14 +312,18 @@ fun ChatScreen(
         }
     }
 
+    val latestRecorder by rememberUpdatedState(mediaRecorder)
+    val latestRecordingFile by rememberUpdatedState(voiceRecordingFile)
+    val latestIsRecording by rememberUpdatedState(isRecordingVoice)
+
     DisposableEffect(Unit) {
         onDispose {
-            val activeRecorder = mediaRecorder
+            val activeRecorder = latestRecorder
             if (activeRecorder != null) {
                 runCatching { activeRecorder.stop() }
                 runCatching { activeRecorder.release() }
             }
-            if (isRecordingVoice) voiceRecordingFile?.delete()
+            if (latestIsRecording) latestRecordingFile?.delete()
         }
     }
 
