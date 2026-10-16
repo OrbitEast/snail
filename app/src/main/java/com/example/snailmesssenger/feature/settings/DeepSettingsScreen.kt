@@ -36,6 +36,7 @@ fun DeepSettingsScreen(
     onOpenAppearance: () -> Unit,
     onOpenEditProfile: () -> Unit,
     onLogout: () -> Unit,
+    showBackButton: Boolean = true,
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -44,7 +45,11 @@ fun DeepSettingsScreen(
     Scaffold(topBar = {
         TopAppBar(
             title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") } },
+            navigationIcon = {
+                if (showBackButton) {
+                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+                }
+            },
         )
     }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding)) {
