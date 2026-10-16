@@ -5,7 +5,7 @@
 - [ ] Build debug variant with Gradle in Android Studio.
 - [ ] Register two local demo accounts and verify duplicate usernames are rejected.
 - [ ] Sign in/out and confirm local account persistence.
-- [ ] Send text, edit your own text, delete a message, add/remove a reaction, and search within a chat.
+- [ ] Send text, edit your own text, delete a message, add/remove a reaction, reply, forward between local chats, create/vote in a poll, and search within a chat.
 - [ ] Pick an image/video and a document from Android system pickers; verify each message survives app restart.
 - [ ] Test light, dark, and system themes, chat wallpapers, and bottom navigation across small and large screens.
 - [ ] Exercise voice/video call screens as UI prototypes; verify no claim of real remote connectivity.

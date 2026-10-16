@@ -6,7 +6,7 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 
 - Username/password sign-up and sign-in for device-local demo accounts (passwords are salted and PBKDF2-hashed).
 - One-to-one conversation list, search, unread/pinned/archive filters, contacts lookup, theme and profile settings.
-- Text messages stored on the device, editable/deletable outgoing text, reply quotes, forwarding between local conversations, emoji reactions, and message search.
+- Text messages stored on the device, editable/deletable outgoing text, reply quotes, forwarding between local conversations, emoji reactions, local polls with vote counts, and message search.
 - The signed-in local demo account is restored after app restart; logout clears that local session.
 - Attach photos/videos through Android's system media picker and documents through the system document picker; tap images for full-screen preview or open video/files/audio in another installed app.
 - Record voice-message audio locally with a microphone permission prompt, a live duration counter, and a dedicated in-app private-storage file URI.
@@ -16,7 +16,7 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 
 ## Important limitations
 
-The current repositories are local prototype stores. Accounts and messages do not synchronize between users or devices, and messages are not end-to-end encrypted. Presence/read receipts are UI/demo state, not a server-backed delivery guarantee. The app does not yet provide a production messaging backend, push notifications, multi-device sync, or actual WebRTC calling.
+The current repositories are local prototype stores. Accounts and messages do not synchronize between users or devices; poll votes are local-only, and messages are not end-to-end encrypted. Presence/read receipts are UI/demo state, not a server-backed delivery guarantee. The app does not yet provide a production messaging backend, push notifications, multi-device sync, or actual WebRTC calling.
 
 The UI borrows broad usability patterns from modern messaging applications while keeping SNAIL's own names and assets. It does not copy Telegram's source code or brand assets.
 

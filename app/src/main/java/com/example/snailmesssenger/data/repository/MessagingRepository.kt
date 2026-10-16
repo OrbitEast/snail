@@ -24,6 +24,8 @@ interface MessagingRepository {
         replyToMessageId: String? = null,
         replyToText: String? = null,
     ): Message
+    fun createPoll(conversationId: String, question: String, options: List<String>): Message
+    fun voteOnPoll(conversationId: String, messageId: String, optionIndex: Int)
     fun forwardMessage(targetConversationId: String, sourceMessage: Message): Message
     fun sendAttachment(conversationId: String, uri: String, mimeType: String, name: String, caption: String = ""): Message
     fun editMessage(conversationId: String, messageId: String, newText: String)
@@ -98,6 +100,66 @@ object DemoMessagingRepository : MessagingRepository {
         return message
     }
 
+    override fun createPoll(conversationId: String, question: String, options: List<String>): Message {
+        val normalizedQuestion = question.trim()
+        val normalizedOptions = options.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        require(normalizedQuestion.isNotEmpty()) { "Poll question cannot be empty." }
+        require(normalizedOptions.size in 2..10) { "A poll must have 2–10 different options." }
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        require(index >= 0) { "Conversation not found." }
+
+        val poll = Message(
+            id = "m${java.util.UUID.randomUUID()}",
+            senderId = Message.ME_ID,
+            text = normalizedQuestion,
+            timestampMs = System.currentTimeMillis(),
+            pollQuestion = normalizedQuestion,
+            pollOptions = normalizedOptions,
+            pollVotes = List(normalizedOptions.size) { 0 },
+        )
+        val updated = mutableConversations[index].copy(
+            messages = mutableConversations[index].messages + poll,
+        )
+        mutableConversations[index] = updated
+        mutableConversations.removeAt(index)
+        mutableConversations.add(0, updated)
+        publishChanges()
+        persistConversations()
+        return poll
+    }
+
+    override fun voteOnPoll(conversationId: String, messageId: String, optionIndex: Int) {
+        val conversationIndex = mutableConversations.indexOfFirst { it.id == conversationId }
+        require(conversationIndex >= 0) { "Conversation not found." }
+        val conversation = mutableConversations[conversationIndex]
+        val poll = conversation.messages.firstOrNull { it.id == messageId }
+            ?: throw IllegalArgumentException("Poll not found.")
+        require(poll.pollQuestion != null && optionIndex in poll.pollOptions.indices) {
+            "Invalid poll option."
+        }
+        if (poll.pollSelectedOption == optionIndex) return
+
+        val counts = if (poll.pollVotes.size == poll.pollOptions.size) {
+            poll.pollVotes.toMutableList()
+        } else {
+            MutableList(poll.pollOptions.size) { 0 }
+        }
+        poll.pollSelectedOption?.takeIf { it in counts.indices }?.let { previous ->
+            counts[previous] = (counts[previous] - 1).coerceAtLeast(0)
+        }
+        counts[optionIndex] = counts[optionIndex] + 1
+
+        mutableConversations[conversationIndex] = conversation.copy(
+            messages = conversation.messages.map { message ->
+                if (message.id == messageId) {
+                    message.copy(pollVotes = counts, pollSelectedOption = optionIndex)
+                } else message
+            },
+        )
+        publishChanges()
+        persistConversations()
+    }
+
     override fun forwardMessage(targetConversationId: String, sourceMessage: Message): Message {
         val index = mutableConversations.indexOfFirst { it.id == targetConversationId }
         require(index >= 0) { "Target conversation not found." }
@@ -112,6 +174,10 @@ object DemoMessagingRepository : MessagingRepository {
             replyToMessageId = null,
             replyToText = null,
             isForwarded = true,
+            pollQuestion = sourceMessage.pollQuestion,
+            pollOptions = sourceMessage.pollOptions,
+            pollVotes = List(sourceMessage.pollOptions.size) { 0 },
+            pollSelectedOption = null,
         )
         val updated = mutableConversations[index].copy(
             messages = mutableConversations[index].messages + message,
@@ -274,7 +340,11 @@ object DemoMessagingRepository : MessagingRepository {
                         .put("isEdited", message.isEdited)
                         .put("replyToMessageId", message.replyToMessageId ?: JSONObject.NULL)
                         .put("replyToText", message.replyToText ?: JSONObject.NULL)
-                        .put("isForwarded", message.isForwarded),
+                        .put("isForwarded", message.isForwarded)
+                        .put("pollQuestion", message.pollQuestion ?: JSONObject.NULL)
+                        .put("pollOptions", JSONArray(message.pollOptions))
+                        .put("pollVotes", JSONArray(message.pollVotes))
+                        .put("pollSelectedOption", message.pollSelectedOption ?: JSONObject.NULL),
                 )
             }
             array.put(
@@ -323,6 +393,14 @@ object DemoMessagingRepository : MessagingRepository {
                                 replyToMessageId = message.optString("replyToMessageId").takeUnless { it.isBlank() || it == "null" },
                                 replyToText = message.optString("replyToText").takeUnless { it.isBlank() || it == "null" },
                                 isForwarded = message.optBoolean("isForwarded", false),
+                                pollQuestion = message.optString("pollQuestion").takeUnless { it.isBlank() || it == "null" },
+                                pollOptions = message.optJSONArray("pollOptions")?.let { options ->
+                                    buildList { for (optionIndex in 0 until options.length()) add(options.optString(optionIndex)) }
+                                }.orEmpty(),
+                                pollVotes = message.optJSONArray("pollVotes")?.let { votes ->
+                                    buildList { for (voteIndex in 0 until votes.length()) add(votes.optInt(voteIndex)) }
+                                }.orEmpty(),
+                                pollSelectedOption = message.optString("pollSelectedOption").toIntOrNull(),
                             ),
                         )
                     }

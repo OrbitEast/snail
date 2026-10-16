@@ -70,6 +70,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -108,6 +109,7 @@ import androidx.core.content.FileProvider
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.DisposableEffect
@@ -184,6 +186,9 @@ fun ChatScreen(
     var searchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showAttachmentMenu by remember { mutableStateOf(false) }
+    var showPollCreator by remember { mutableStateOf(false) }
+    var pollQuestion by remember { mutableStateOf("") }
+    var pollOptions by remember { mutableStateOf(listOf("", "")) }
     var selectedMessage by remember { mutableStateOf<Message?>(null) }
     var forwardingMessage by remember { mutableStateOf<Message?>(null) }
     var editingMessageId by remember { mutableStateOf<String?>(null) }
@@ -685,6 +690,14 @@ fun ChatScreen(
                                         filePicker.launch(arrayOf("*/*"))
                                     },
                                 )
+                                DropdownMenuItem(
+                                    text = { Text("Poll") },
+                                    leadingIcon = { Icon(Icons.Default.Poll, contentDescription = null) },
+                                    onClick = {
+                                        showAttachmentMenu = false
+                                        showPollCreator = true
+                                    },
+                                )
                             }
                         }
                         IconButton(
@@ -840,12 +853,83 @@ fun ChatScreen(
                             message = message,
                             isDark = isDarkTheme,
                             onLongPress = { selectedMessage = message },
+                            onVotePoll = { messageId, optionIndex ->
+                                DemoMessagingRepository.voteOnPoll(conversationId, messageId, optionIndex)
+                                messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+                            },
                         )
                     }
                 }
             }
             }
         }
+    }
+
+    if (showPollCreator) {
+        AlertDialog(
+            onDismissRequest = { showPollCreator = false },
+            title = { Text("Create poll") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = pollQuestion,
+                        onValueChange = { pollQuestion = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Question") },
+                        singleLine = true,
+                    )
+                    pollOptions.forEachIndexed { index, option ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = option,
+                                onValueChange = { value ->
+                                    pollOptions = pollOptions.mapIndexed { optionIndex, old ->
+                                        if (optionIndex == index) value else old
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                label = { Text("Option ${index + 1}") },
+                                singleLine = true,
+                            )
+                            if (pollOptions.size > 2) {
+                                IconButton(onClick = {
+                                    pollOptions = pollOptions.filterIndexed { optionIndex, _ -> optionIndex != index }
+                                }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Remove option")
+                                }
+                            }
+                        }
+                    }
+                    if (pollOptions.size < 10) {
+                        TextButton(onClick = { pollOptions = pollOptions + "" }) { Text("Add option") }
+                    }
+                    Text(
+                        "Polls are saved on this device in this prototype.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = pollQuestion.isNotBlank() &&
+                        pollOptions.map { it.trim() }.filter { it.isNotEmpty() }.distinct().size >= 2,
+                    onClick = {
+                        DemoMessagingRepository.createPoll(conversationId, pollQuestion, pollOptions)
+                        messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+                        showPollCreator = false
+                        pollQuestion = ""
+                        pollOptions = listOf("", "")
+                    },
+                ) { Text("Create poll") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPollCreator = false }) { Text("Cancel") }
+            },
+        )
     }
 
     selectedMessage?.let { message ->
@@ -985,6 +1069,7 @@ private fun MessageBubble(
     message: Message,
     isDark: Boolean,
     onLongPress: () -> Unit,
+    onVotePoll: (String, Int) -> Unit,
 ) {
     val messageFontSize = LocalChatTextSize.current
     val bubbleRadius = LocalChatBubbleRadius.current
@@ -1003,8 +1088,9 @@ private fun MessageBubble(
         !outgoing && isDark -> Color.White
         else -> Color.Black
     }
-    val isPlaceholderCaption = message.attachmentUri != null &&
-        (message.text == "Photo" || message.text == "Video" || message.text == "Voice message" || message.text.startsWith("File: "))
+    val isPlaceholderCaption = (message.attachmentUri != null &&
+        (message.text == "Photo" || message.text == "Video" || message.text == "Voice message" || message.text.startsWith("File: "))) ||
+        message.pollQuestion != null
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -1041,6 +1127,74 @@ private fun MessageBubble(
                             color = textColor.copy(alpha = 0.70f),
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                         )
+                    }
+                    if (message.pollQuestion != null && message.pollOptions.size >= 2) {
+                        val totalVotes = message.pollVotes.sum()
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp),
+                            horizontalAlignment = Alignment.Start,
+                        ) {
+                            Text(
+                                "POLL",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                            )
+                            Text(
+                                message.pollQuestion,
+                                color = textColor,
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            )
+                            message.pollOptions.forEachIndexed { optionIndex, option ->
+                                val votes = message.pollVotes.getOrElse(optionIndex) { 0 }
+                                val progress = if (totalVotes > 0) (votes.toFloat() / totalVotes).coerceIn(0f, 1f) else 0f
+                                Surface(
+                                    onClick = { onVotePoll(message.id, optionIndex) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (message.pollSelectedOption == optionIndex)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(5.dp),
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                option,
+                                                modifier = Modifier.weight(1f),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            Text(
+                                                votes.toString(),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                style = MaterialTheme.typography.labelMedium,
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().height(4.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)),
+                                        ) {
+                                            if (totalVotes > 0) {
+                                                Box(
+                                                    modifier = Modifier.fillMaxWidth(progress).height(4.dp)
+                                                        .clip(CircleShape)
+                                                        .background(MaterialTheme.colorScheme.primary),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Text(
+                                "$totalVotes vote${if (totalVotes == 1) "" else "s"} · Tap an option to vote",
+                                color = textColor.copy(alpha = 0.68f),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
                     }
                     message.replyToText?.takeIf { it.isNotBlank() }?.let { quote ->
                         Surface(

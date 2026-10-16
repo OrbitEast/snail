@@ -34,6 +34,10 @@ data class Message(
     val replyToMessageId: String? = null,
     val replyToText: String? = null,
     val isForwarded: Boolean = false,
+    val pollQuestion: String? = null,
+    val pollOptions: List<String> = emptyList(),
+    val pollVotes: List<Int> = emptyList(),
+    val pollSelectedOption: Int? = null,
 ) {
     val isOutgoing: Boolean get() = senderId == ME_ID
 
