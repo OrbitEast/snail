@@ -213,9 +213,10 @@ fun ChatScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    text = "online",
+                                    text = if (conversation.peer.isOnline) "online" else "last seen recently",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = ReadCheckmarkGreen,
+                                    color = if (conversation.peer.isOnline) ReadCheckmarkGreen
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             }
@@ -578,7 +579,7 @@ fun ChatScreen(
         PeerProfileSheet(
             peer = conversation.peer,
             onDismiss = { showProfileSheet = false },
-            onCallClick = { showProfileSheet = false },
+            onCallClick = { showProfileSheet = false; onVoiceCall() },
         )
     }
 }
@@ -619,7 +620,7 @@ private fun MessageBubble(message: Message) {
                     bottomEnd = if (outgoing) 4.dp else bubbleRadius,
                 ),
                 shadowElevation = 0.5.dp,
-                modifier = Modifier.widthIn(max = 310.dp),
+                modifier = Modifier.widthIn(max = 310.dp).animateContentSize(),
             ) {
                 Column(
                     modifier = Modifier.padding(start = 12.dp, end = 10.dp, top = 7.dp, bottom = 5.dp),
