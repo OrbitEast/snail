@@ -13,6 +13,7 @@
 - [ ] Pin a message, verify the banner survives relaunch and jumps to the right item, then unpin it.
 - [ ] Type a draft and reply, leave the chat immediately (including before the debounce delay), return and restart the app; confirm text/reply draft restores and clears after sending.
 - [ ] Schedule a message for the future, reopen the scheduled list, cancel another scheduled message, and verify a due message appears once after waiting/restarting.
+- [ ] Verify pending schedules render correctly from the encrypted metadata index, cancel removes the index entry, and completed jobs remove their metadata.
 - [ ] Schedule under one local account, switch/logout before the due time, and verify the job cannot place that account's text into another account's local history.
 - [ ] Open Saved Messages twice and confirm only one self-chat exists and its messages persist after app restart.
 - [ ] Create a group/channel, reopen its profile, add/remove members or subscribers, and verify membership count and selected list update and persist.

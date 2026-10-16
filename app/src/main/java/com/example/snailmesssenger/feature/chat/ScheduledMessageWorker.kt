@@ -1,8 +1,9 @@
 package com.example.snailmesssenger.feature.chat
 
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
+import android.content.SharedPreferences
 import androidx.work.CoroutineWorker
-import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -13,6 +14,7 @@ import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import com.example.snailmesssenger.data.security.LocalVault
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -30,20 +32,27 @@ class ScheduledMessageWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val conversationId = inputData.getString(KEY_CONVERSATION_ID) ?: return Result.failure()
+        val scheduledAccountId = inputData.getString(KEY_ACCOUNT_ID) ?: "guest"
+        val conversationId = inputData.getString(KEY_CONVERSATION_ID)
         val text = runCatching { LocalVault.decrypt(inputData.getString(KEY_TEXT).orEmpty()) }
             .getOrNull()?.trim().orEmpty()
         val scheduledId = inputData.getString(KEY_SCHEDULED_ID) ?: id.toString()
-        val scheduledAccountId = inputData.getString(KEY_ACCOUNT_ID) ?: "guest"
         val replyToMessageId = inputData.getString(KEY_REPLY_TO_MESSAGE_ID)
         val replyToText = inputData.getString(KEY_REPLY_TO_TEXT)
             ?.let { runCatching { LocalVault.decrypt(it) }.getOrNull() }
-        if (text.isBlank()) return Result.failure()
+
+        if (conversationId.isNullOrBlank() || text.isBlank()) {
+            removeScheduledMetadata(applicationContext, id, scheduledAccountId)
+            return Result.failure()
+        }
 
         return try {
             DemoAuthRepository.initialize(applicationContext)
             val activeAccountId = DemoAuthRepository.currentUser?.id ?: "guest"
-            if (activeAccountId != scheduledAccountId) return Result.failure()
+            if (activeAccountId != scheduledAccountId) {
+                removeScheduledMetadata(applicationContext, id, scheduledAccountId)
+                return Result.failure()
+            }
             DemoMessagingRepository.initialize(applicationContext, DemoAuthRepository.currentUser?.id)
             DemoMessagingRepository.sendScheduledMessage(
                 conversationId = conversationId,
@@ -52,11 +61,18 @@ class ScheduledMessageWorker(
                 replyToMessageId = replyToMessageId,
                 replyToText = replyToText,
             )
+            removeScheduledMetadata(applicationContext, id, scheduledAccountId)
             Result.success()
         } catch (_: IllegalArgumentException) {
+            removeScheduledMetadata(applicationContext, id, scheduledAccountId)
             Result.failure()
         } catch (_: Exception) {
-            if (runAttemptCount < 3) Result.retry() else Result.failure()
+            if (runAttemptCount < 3) {
+                Result.retry()
+            } else {
+                removeScheduledMetadata(applicationContext, id, scheduledAccountId)
+                Result.failure()
+            }
         }
     }
 
@@ -98,6 +114,16 @@ class ScheduledMessageWorker(
                 .setInitialDelay(scheduledAtMs - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
                 .addTag(SCHEDULED_TAG)
                 .build()
+            val accountId = DemoAuthRepository.currentUser?.id ?: "guest"
+            persistScheduledMetadata(
+                context = context,
+                workRequestId = request.id,
+                accountId = accountId,
+                conversationId = conversationId,
+                scheduledId = scheduledId,
+                text = normalizedText,
+                scheduledAtMs = scheduledAtMs,
+            )
             WorkManager.getInstance(context.applicationContext).enqueue(request)
             return request.id
         }
@@ -106,31 +132,17 @@ class ScheduledMessageWorker(
             context: Context,
             conversationId: String,
         ): List<ScheduledMessageItem> = withContext(Dispatchers.IO) {
+            DemoAuthRepository.initialize(context.applicationContext)
+            val activeAccountId = DemoAuthRepository.currentUser?.id ?: "guest"
             WorkManager.getInstance(context.applicationContext)
                 .getWorkInfosByTag(SCHEDULED_TAG)
                 .get()
                 .asSequence()
                 .filter { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED }
                 .mapNotNull { info ->
-                    val data: Data = info.inputData
-                    val targetConversationId = data.getString(KEY_CONVERSATION_ID) ?: return@mapNotNull null
-                    if (targetConversationId != conversationId) return@mapNotNull null
-                    val requestAccountId = data.getString(KEY_ACCOUNT_ID) ?: "guest"
-                    val currentAccountId = DemoAuthRepository.currentUser?.id ?: "guest"
-                    if (requestAccountId != currentAccountId) return@mapNotNull null
-                    val text = data.getString(KEY_TEXT)
-                        ?.let { runCatching { LocalVault.decrypt(it) }.getOrNull() }
-                        ?: return@mapNotNull null
-                    val scheduledId = data.getString(KEY_SCHEDULED_ID) ?: info.id.toString()
-                    val scheduledAt = data.getLong(KEY_SCHEDULED_AT, 0L)
-                    if (scheduledAt <= 0L) return@mapNotNull null
-                    ScheduledMessageItem(
-                        workRequestId = info.id,
-                        scheduledId = scheduledId,
-                        conversationId = targetConversationId,
-                        text = text,
-                        scheduledAtMs = scheduledAt,
-                    )
+                    val item = readScheduledMetadata(context, info.id, activeAccountId) ?: return@mapNotNull null
+                    if (item.conversationId != conversationId) return@mapNotNull null
+                    item
                 }
                 .sortedBy { it.scheduledAtMs }
                 .toList()
@@ -138,6 +150,68 @@ class ScheduledMessageWorker(
 
         fun cancel(context: Context, workRequestId: UUID) {
             WorkManager.getInstance(context.applicationContext).cancelWorkById(workRequestId)
+            val accountId = DemoAuthRepository.currentUser?.id ?: "guest"
+            removeScheduledMetadata(context.applicationContext, workRequestId, accountId)
+        }
+
+        private const val METADATA_PREFS_PREFIX = "snail_scheduled_metadata_"
+
+        private fun metadataStore(context: Context, accountId: String): SharedPreferences {
+            val safeKey = accountId.filter { it.isLetterOrDigit() || it == '_' || it == '-' }
+                .take(48)
+                .ifBlank { "guest" }
+            return context.applicationContext.getSharedPreferences(
+                "$METADATA_PREFS_PREFIX$safeKey",
+                MODE_PRIVATE,
+            )
+        }
+
+        private fun persistScheduledMetadata(
+            context: Context,
+            workRequestId: UUID,
+            accountId: String,
+            conversationId: String,
+            scheduledId: String,
+            text: String,
+            scheduledAtMs: Long,
+        ) {
+            val payload = JSONObject()
+                .put("accountId", accountId)
+                .put("conversationId", conversationId)
+                .put("scheduledId", scheduledId)
+                .put("text", text)
+                .put("scheduledAtMs", scheduledAtMs)
+            metadataStore(context, accountId)
+                .edit()
+                .putString(workRequestId.toString(), LocalVault.encrypt(payload.toString()))
+                .apply()
+        }
+
+        private fun readScheduledMetadata(
+            context: Context,
+            workRequestId: UUID,
+            accountId: String,
+        ): ScheduledMessageItem? {
+            val stored = metadataStore(context, accountId).getString(workRequestId.toString(), null)
+                ?: return null
+            val raw = runCatching { LocalVault.decrypt(stored) }.getOrNull() ?: return null
+            val payload = runCatching { JSONObject(raw) }.getOrNull() ?: return null
+            if (payload.optString("accountId") != accountId) return null
+            val conversationId = payload.optString("conversationId").takeIf { it.isNotBlank() } ?: return null
+            val scheduledId = payload.optString("scheduledId").takeIf { it.isNotBlank() } ?: return null
+            val text = payload.optString("text").takeIf { it.isNotBlank() } ?: return null
+            val scheduledAtMs = payload.optLong("scheduledAtMs", 0L).takeIf { it > 0L } ?: return null
+            return ScheduledMessageItem(
+                workRequestId = workRequestId,
+                scheduledId = scheduledId,
+                conversationId = conversationId,
+                text = text,
+                scheduledAtMs = scheduledAtMs,
+            )
+        }
+
+        private fun removeScheduledMetadata(context: Context, workRequestId: UUID, accountId: String) {
+            metadataStore(context, accountId).edit().remove(workRequestId.toString()).apply()
         }
     }
 }

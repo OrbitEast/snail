@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Bookmark
 import com.example.snailmesssenger.core.designsystem.DarkBubbleIn
 import com.example.snailmesssenger.core.designsystem.DarkBubbleOut
 import com.example.snailmesssenger.core.designsystem.LightBubbleIn
@@ -1070,7 +1071,7 @@ fun ChatScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            Icons.Default.PushPin,
+                            Icons.Default.Bookmark,
                             contentDescription = "Pinned message",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(19.dp),
