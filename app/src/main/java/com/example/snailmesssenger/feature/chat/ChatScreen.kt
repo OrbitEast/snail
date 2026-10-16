@@ -381,6 +381,26 @@ fun ChatScreen(
         }
     }
 
+    val latestDraftText by rememberUpdatedState(inputText)
+    val latestDraftReplyTarget by rememberUpdatedState(replyTarget)
+    val latestEditingMessageId by rememberUpdatedState(editingMessageId)
+
+    DisposableEffect(conversationId) {
+        onDispose {
+            if (latestEditingMessageId == null) {
+                val latestReply = latestDraftReplyTarget
+                DemoMessagingRepository.saveDraft(
+                    conversationId,
+                    MessageDraft(
+                        text = latestDraftText,
+                        replyToMessageId = latestReply?.id?.takeUnless { it == "draft-reply" },
+                        replyToText = latestReply?.text,
+                    ),
+                )
+            }
+        }
+    }
+
     LaunchedEffect(inputText, replyTarget?.id, replyTarget?.text, editingMessageId, conversationId) {
         if (editingMessageId != null) return@LaunchedEffect
         delay(350)

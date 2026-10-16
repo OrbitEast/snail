@@ -8,7 +8,7 @@
 - [ ] Send text, edit your own text, delete a message, add/remove a reaction, reply, forward between local chats, create/vote in a poll, and search within a chat.
 - [ ] Search for text that exists only in an older message; verify it appears under the global MESSAGES section, opens the correct conversation, and scrolls/highlights the exact message.
 - [ ] Pin a message, verify the banner survives relaunch and jumps to the right item, then unpin it.
-- [ ] Type a draft and reply, leave the chat, return and restart the app; confirm text/reply draft restores and clears after sending.
+- [ ] Type a draft and reply, leave the chat immediately (including before the debounce delay), return and restart the app; confirm text/reply draft restores and clears after sending.
 - [ ] Schedule a message for the future, reopen the scheduled list, cancel another scheduled message, and verify a due message appears once after waiting/restarting.
 - [ ] Open Saved Messages twice and confirm only one self-chat exists and its messages persist after app restart.
 - [ ] Create a group/channel, reopen its profile, add/remove members or subscribers, and verify membership count and selected list update and persist.
