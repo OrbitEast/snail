@@ -23,6 +23,11 @@ data class Message(
     val senderId: String, // user id; "me" for outgoing
     val text: String,
     val timestampMs: Long,
+    val attachmentUri: String? = null,
+    val attachmentName: String? = null,
+    val attachmentMimeType: String? = null,
+    val reaction: String? = null,
+    val isEdited: Boolean = false,
 ) {
     val isOutgoing: Boolean get() = senderId == ME_ID
 

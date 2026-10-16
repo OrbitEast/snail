@@ -1,22 +1,16 @@
-# SNAIL Android Testing Builds
+# SNAIL Messenger — Testing Notes
 
-Current testing version: **2.1** (versionCode 8).
+## Static verification checklist
 
-## Get the latest APK
+- [ ] Build debug variant with Gradle in Android Studio.
+- [ ] Register two local demo accounts and verify duplicate usernames are rejected.
+- [ ] Sign in/out and confirm local account persistence.
+- [ ] Send text, edit your own text, delete a message, add/remove a reaction, and search within a chat.
+- [ ] Pick an image/video and a document from Android system pickers; verify each message survives app restart.
+- [ ] Test light, dark, and system themes, chat wallpapers, and bottom navigation across small and large screens.
+- [ ] Exercise voice/video call screens as UI prototypes; verify no claim of real remote connectivity.
+- [ ] Test URI permissions after Android process death and app restart on API 28+ devices.
 
-1. Open the [Android APK build workflow](https://github.com/OrbitEast/snail/actions/workflows/android-apk.yml).
-2. Select the newest completed run on the `main` branch.
-3. In **Artifacts**, download the artifact named `SNAIL-v<version>-debug-apk` (for example, `SNAIL-v2.1-debug-apk`). The artifact name updates automatically when the app version changes.
-4. Extract the ZIP and install `app-debug.apk` on your Android device.
+## Current verification status
 
-## Build behavior
-
-- Every push to `main` starts a debug APK build.
-- You can start one manually from the workflow page using **Run workflow**.
-- APKs are stored as GitHub Actions artifacts for 30 days.
-- The APK is a **debug/testing build**, not a signed production release.
-- A failed build will not have an APK artifact. Open the workflow run and inspect the build logs.
-
-## Versioning
-
-The current app version is configured in `app/build.gradle.kts`. For the next test release, increase `versionCode` and update `versionName` before committing. Android requires each install-over update to have a higher version code.
+The latest source changes are committed, but an Android Gradle compile and on-device run have not been performed in this pass. Treat picker URI persistence as needing device verification. Cloud messaging, cross-device accounts, backend presence, end-to-end encryption, push delivery, and real voice/video calling are not implemented by the local prototype.

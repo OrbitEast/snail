@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
@@ -33,6 +34,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.snailmesssenger.core.designsystem.SnailLogo
+import com.example.snailmesssenger.core.designsystem.snailGlass
 
 @Composable
 fun SnailSearchTopBar(
@@ -45,8 +47,13 @@ fun SnailSearchTopBar(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        modifier = modifier.fillMaxWidth().snailGlass(
+            shape = RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp),
+            baseColor = MaterialTheme.colorScheme.surface,
+            elevation = 4.dp,
+        ),
+        shape = RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp),
+        color = Color.Transparent,
         shadowElevation = 0.dp,
     ) {
         Row(

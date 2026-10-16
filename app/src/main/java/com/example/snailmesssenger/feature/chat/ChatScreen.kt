@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -54,8 +56,12 @@ import com.example.snailmesssenger.core.designsystem.LightBubbleOut
 import com.example.snailmesssenger.core.designsystem.ReadCheckmarkGreen
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,8 +71,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
@@ -78,11 +88,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
+import android.content.Intent
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
+import com.example.snailmesssenger.core.designsystem.snailGlass
 import coil.compose.AsyncImage
 import com.example.snailmesssenger.core.designsystem.SnailAvatar
 import com.example.snailmesssenger.core.designsystem.Spacing
@@ -149,7 +167,48 @@ fun ChatScreen(
     }
     var searchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showAttachmentMenu by remember { mutableStateOf(false) }
+    var selectedMessage by remember { mutableStateOf<Message?>(null) }
+    var editingMessageId by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
+
+    val mediaPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+            DemoMessagingRepository.sendAttachment(
+                conversationId = conversationId,
+                uri = uri.toString(),
+                mimeType = mimeType,
+                name = resolveDisplayName(context, uri),
+            )
+            messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+        }
+    }
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+            DemoMessagingRepository.sendAttachment(
+                conversationId = conversationId,
+                uri = uri.toString(),
+                mimeType = mimeType,
+                name = resolveDisplayName(context, uri),
+            )
+            messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+        }
+    }
+
     LaunchedEffect(conversation.messages) {
         messages = conversation.messages
     }
@@ -171,7 +230,13 @@ fun ChatScreen(
     fun send() {
         val text = inputText.trim()
         if (text.isEmpty()) return
-        DemoMessagingRepository.sendMessage(conversationId, text)
+        val editId = editingMessageId
+        if (editId != null) {
+            DemoMessagingRepository.editMessage(conversationId, editId, text)
+            editingMessageId = null
+        } else {
+            DemoMessagingRepository.sendMessage(conversationId, text)
+        }
         messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
         inputText = ""
         showEmojiPicker = false
@@ -327,11 +392,35 @@ fun ChatScreen(
         bottomBar = {
             Column(
                 modifier = Modifier.fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
                     .navigationBarsPadding()
+                    .snailGlass(
+                        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+                        baseColor = MaterialTheme.colorScheme.surface,
+                        elevation = 12.dp,
+                    )
                     .animateContentSize()
                     .padding(top = 7.dp, bottom = 5.dp),
             ) {
+                AnimatedVisibility(
+                    visible = editingMessageId != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Editing message",
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        IconButton(onClick = { editingMessageId = null; inputText = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel edit")
+                        }
+                    }
+                }
                 AnimatedVisibility(
                     visible = showEmojiPicker,
                     enter = fadeIn() + expandVertically(),
@@ -410,6 +499,42 @@ fun ChatScreen(
                             .padding(start = 4.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
                         verticalAlignment = Alignment.Bottom,
                     ) {
+                        Box {
+                            IconButton(
+                                onClick = { showAttachmentMenu = true },
+                                modifier = Modifier.size(38.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.AttachFile,
+                                    contentDescription = "Attach photo, video, or file",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showAttachmentMenu,
+                                onDismissRequest = { showAttachmentMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Photo or video") },
+                                    leadingIcon = { Icon(Icons.Default.PlayCircleFilled, contentDescription = null) },
+                                    onClick = {
+                                        showAttachmentMenu = false
+                                        mediaPicker.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
+                                        )
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("File or document") },
+                                    leadingIcon = { Icon(Icons.Default.InsertDriveFile, contentDescription = null) },
+                                    onClick = {
+                                        showAttachmentMenu = false
+                                        filePicker.launch(arrayOf("*/*"))
+                                    },
+                                )
+                            }
+                        }
                         IconButton(
                             onClick = { showEmojiPicker = !showEmojiPicker },
                             modifier = Modifier.size(42.dp),
@@ -535,12 +660,71 @@ fun ChatScreen(
                     verticalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
                     items(filteredMessages, key = { it.id }) { message ->
-                        MessageBubble(message = message, isDark = isDarkTheme)
+                        MessageBubble(
+                            message = message,
+                            isDark = isDarkTheme,
+                            onLongPress = { selectedMessage = message },
+                        )
                     }
                 }
             }
             }
         }
+    }
+
+    selectedMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { selectedMessage = null },
+            title = { Text("Message actions") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        listOf("👍", "❤️", "😂", "🔥", "😮").forEach { emoji ->
+                            Surface(
+                                onClick = {
+                                    DemoMessagingRepository.reactToMessage(conversationId, message.id, emoji)
+                                    messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+                                    selectedMessage = null
+                                },
+                                shape = CircleShape,
+                                color = if (message.reaction == emoji) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant,
+                            ) {
+                                Text(emoji, modifier = Modifier.padding(9.dp), fontSize = 20.sp)
+                            }
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(message.text))
+                            selectedMessage = null
+                        },
+                    ) { Text("Copy text") }
+                    if (message.isOutgoing && message.attachmentUri == null) {
+                        TextButton(
+                            onClick = {
+                                inputText = message.text
+                                editingMessageId = message.id
+                                selectedMessage = null
+                            },
+                        ) { Text("Edit message") }
+                    }
+                    TextButton(
+                        onClick = {
+                            DemoMessagingRepository.deleteMessage(conversationId, message.id)
+                            messages = DemoMessagingRepository.getConversation(conversationId)?.messages ?: messages
+                            selectedMessage = null
+                        },
+                    ) { Text("Delete from this device") }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedMessage = null }) { Text("Close") }
+            },
+        )
     }
 
     if (showProfileSheet) {
@@ -553,24 +737,28 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(message: Message, isDark: Boolean) {
+private fun MessageBubble(
+    message: Message,
+    isDark: Boolean,
+    onLongPress: () -> Unit,
+) {
     val messageFontSize = LocalChatTextSize.current
     val bubbleRadius = LocalChatBubbleRadius.current
     val outgoing = message.isOutgoing
-
     val bubbleColor = when {
         outgoing && isDark -> DarkBubbleOut
         outgoing && !isDark -> LightBubbleOut
         !outgoing && isDark -> DarkBubbleIn
         else -> LightBubbleIn
     }
-
     val textColor = when {
         outgoing && isDark -> Color.White
         outgoing && !isDark -> Color.Black
         !outgoing && isDark -> Color.White
         else -> Color.Black
     }
+    val isPlaceholderCaption = message.attachmentUri != null &&
+        (message.text == "Photo" || message.text == "Video" || message.text.startsWith("File: "))
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -586,41 +774,112 @@ private fun MessageBubble(message: Message, isDark: Boolean) {
                     bottomStart = if (outgoing) bubbleRadius else 4.dp,
                     bottomEnd = if (outgoing) 4.dp else bubbleRadius,
                 ),
-                shadowElevation = 0.5.dp,
-                modifier = Modifier.widthIn(max = 310.dp).animateContentSize(),
+                shadowElevation = 1.dp,
+                modifier = Modifier.widthIn(max = 310.dp)
+                    .animateContentSize()
+                    .combinedClickable(onClick = {}, onLongClick = onLongPress),
             ) {
                 Column(
-                    modifier = Modifier.padding(start = 12.dp, end = 10.dp, top = 7.dp, bottom = 5.dp),
+                    modifier = Modifier.padding(
+                        start = if (message.attachmentUri != null) 6.dp else 12.dp,
+                        end = if (message.attachmentUri != null) 6.dp else 10.dp,
+                        top = 7.dp,
+                        bottom = 5.dp,
+                    ),
                     horizontalAlignment = Alignment.End,
                 ) {
-                    Text(
-                        text = message.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = messageFontSize,
-                            lineHeight = messageFontSize * 1.32f,
-                        ),
-                        color = textColor,
-                    )
-                    Spacer(Modifier.height(2.dp))
+                    val mimeType = message.attachmentMimeType.orEmpty()
+                    if (message.attachmentUri != null) {
+                        when {
+                            mimeType.startsWith("image/") -> AsyncImage(
+                                model = message.attachmentUri,
+                                contentDescription = message.attachmentName ?: "Attached image",
+                                modifier = Modifier.width(240.dp).heightIn(min = 100.dp, max = 230.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop,
+                            )
+                            mimeType.startsWith("video/") -> Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Default.PlayCircleFilled, contentDescription = null, modifier = Modifier.size(34.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column(horizontalAlignment = Alignment.Start) {
+                                    Text("Video", fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        message.attachmentName ?: "Video attachment",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.7f),
+                                    )
+                                }
+                            }
+                            else -> Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Default.InsertDriveFile, contentDescription = null, modifier = Modifier.size(30.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column(horizontalAlignment = Alignment.Start) {
+                                    Text(
+                                        message.attachmentName ?: "File",
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        mimeType.ifBlank { "Document" },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.7f),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (message.text.isNotBlank() && !isPlaceholderCaption) {
+                        Text(
+                            text = message.text,
+                            modifier = Modifier.padding(horizontal = if (message.attachmentUri != null) 6.dp else 0.dp)
+                                .padding(top = if (message.attachmentUri != null) 4.dp else 0.dp),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = messageFontSize,
+                                lineHeight = messageFontSize * 1.32f,
+                            ),
+                            color = textColor,
+                        )
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.padding(horizontal = 4.dp),
                     ) {
                         Text(
-                            text = formatTime(message.timestampMs),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            text = if (message.isEdited) "${formatTime(message.timestampMs)} · edited" else formatTime(message.timestampMs),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = textColor.copy(alpha = if (outgoing) 0.72f else 0.55f),
                         )
                         if (outgoing) {
                             Spacer(Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.Default.DoneAll,
-                                contentDescription = "Read",
+                                contentDescription = "Sent on this device",
                                 modifier = Modifier.size(16.dp),
                                 tint = if (isDark) ReadCheckmarkGreen else Color(0xFF40C351),
                             )
                         }
                     }
+                }
+            }
+            message.reaction?.let { reaction ->
+                Surface(
+                    modifier = Modifier.padding(top = 2.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    ),
+                ) {
+                    Text(reaction, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), fontSize = 15.sp)
                 }
             }
         }
@@ -633,3 +892,12 @@ private fun formatTime(ms: Long): String =
 
 private fun parseChatColor(hex: String): Color =
     runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color(0xFFE7EBF0))
+
+private fun resolveDisplayName(context: Context, uri: Uri): String {
+    val resolver = context.contentResolver
+    return runCatching {
+        resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+    }.getOrNull()?.takeIf { it.isNotBlank() } ?: uri.lastPathSegment?.substringAfterLast('/') ?: "Attachment"
+}

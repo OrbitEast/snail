@@ -19,6 +19,10 @@ interface MessagingRepository {
     fun getConversations(): List<Conversation>
     fun getConversation(id: String): Conversation?
     fun sendMessage(conversationId: String, text: String): Message
+    fun sendAttachment(conversationId: String, uri: String, mimeType: String, name: String, caption: String = ""): Message
+    fun editMessage(conversationId: String, messageId: String, newText: String)
+    fun deleteMessage(conversationId: String, messageId: String)
+    fun reactToMessage(conversationId: String, messageId: String, reaction: String)
     fun startConversationWith(peerId: String): Conversation
     fun markConversationRead(conversationId: String)
 }
@@ -75,37 +79,89 @@ object DemoMessagingRepository : MessagingRepository {
         publishChanges()
         persistConversations()
 
-        // Simulate auto-reply for interactive demo feel
-        simulatePeerReply(conversationId, normalizedText)
         return message
     }
 
-    private fun simulatePeerReply(conversationId: String, userText: String) {
-        val peerResponses = listOf(
-            "Got your message! SNAIL v2.1 UI looks so sleek 🔥",
-            "Hey! Telegram 2026 mode is super clean and fast 🚀",
-            "Awesome update! Love the dark theme and smooth design 💙",
-            "Sounds great! Let's talk soon 🤝",
-            "Thanks for reaching out! Checked out the new features 👌",
-        )
-        val responseText = peerResponses.random()
+    override fun sendAttachment(
+        conversationId: String,
+        uri: String,
+        mimeType: String,
+        name: String,
+        caption: String,
+    ): Message {
+        require(uri.isNotBlank()) { "Attachment URI is required." }
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
-        if (index >= 0) {
-            val peerId = mutableConversations[index].peer.id
-            val replyMessage = Message(
-                id = "m${System.currentTimeMillis() + 10}",
-                senderId = peerId,
-                text = responseText,
-                timestampMs = System.currentTimeMillis() + 500,
-            )
-            val updated = mutableConversations[index].copy(
-                messages = mutableConversations[index].messages + replyMessage,
-                peer = mutableConversations[index].peer.copy(isOnline = true),
-            )
-            mutableConversations[index] = updated
-            publishChanges()
-            persistConversations()
+        require(index >= 0) { "Conversation not found." }
+        val normalizedName = name.trim().ifBlank { "Attachment" }
+        val normalizedCaption = caption.trim().ifBlank {
+            when {
+                mimeType.startsWith("image/") -> "Photo"
+                mimeType.startsWith("video/") -> "Video"
+                else -> "File: $normalizedName"
+            }
         }
+        val message = Message(
+            id = "m${java.util.UUID.randomUUID()}",
+            senderId = Message.ME_ID,
+            text = normalizedCaption,
+            timestampMs = System.currentTimeMillis(),
+            attachmentUri = uri,
+            attachmentName = normalizedName,
+            attachmentMimeType = mimeType,
+        )
+        val updated = mutableConversations[index].copy(
+            messages = mutableConversations[index].messages + message,
+        )
+        mutableConversations[index] = updated
+        mutableConversations.removeAt(index)
+        mutableConversations.add(0, updated)
+        publishChanges()
+        persistConversations()
+        return message
+    }
+
+    override fun editMessage(conversationId: String, messageId: String, newText: String) {
+        val normalizedText = newText.trim()
+        require(normalizedText.isNotEmpty()) { "Message cannot be empty." }
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        require(index >= 0) { "Conversation not found." }
+        val target = mutableConversations[index].messages.firstOrNull { it.id == messageId }
+            ?: throw IllegalArgumentException("Message not found.")
+        require(target.isOutgoing && target.attachmentUri == null) { "Only your text messages can be edited." }
+        val updated = mutableConversations[index].copy(
+            messages = mutableConversations[index].messages.map { message ->
+                if (message.id == messageId) message.copy(text = normalizedText, isEdited = true) else message
+            },
+        )
+        mutableConversations[index] = updated
+        publishChanges()
+        persistConversations()
+    }
+
+    override fun deleteMessage(conversationId: String, messageId: String) {
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        if (index < 0) return
+        val updated = mutableConversations[index].copy(
+            messages = mutableConversations[index].messages.filterNot { it.id == messageId },
+        )
+        mutableConversations[index] = updated
+        publishChanges()
+        persistConversations()
+    }
+
+    override fun reactToMessage(conversationId: String, messageId: String, reaction: String) {
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        if (index < 0) return
+        val updated = mutableConversations[index].copy(
+            messages = mutableConversations[index].messages.map { message ->
+                if (message.id == messageId) {
+                    message.copy(reaction = if (message.reaction == reaction) null else reaction)
+                } else message
+            },
+        )
+        mutableConversations[index] = updated
+        publishChanges()
+        persistConversations()
     }
 
     override fun startConversationWith(peerId: String): Conversation {
@@ -144,7 +200,12 @@ object DemoMessagingRepository : MessagingRepository {
                         .put("id", message.id)
                         .put("senderId", message.senderId)
                         .put("text", message.text)
-                        .put("timestampMs", message.timestampMs),
+                        .put("timestampMs", message.timestampMs)
+                        .put("attachmentUri", message.attachmentUri ?: JSONObject.NULL)
+                        .put("attachmentName", message.attachmentName ?: JSONObject.NULL)
+                        .put("attachmentMimeType", message.attachmentMimeType ?: JSONObject.NULL)
+                        .put("reaction", message.reaction ?: JSONObject.NULL)
+                        .put("isEdited", message.isEdited),
                 )
             }
             array.put(
@@ -182,6 +243,11 @@ object DemoMessagingRepository : MessagingRepository {
                                 senderId = message.optString("senderId"),
                                 text = message.optString("text"),
                                 timestampMs = message.optLong("timestampMs"),
+                                attachmentUri = message.optString("attachmentUri").takeUnless { it.isBlank() || it == "null" },
+                                attachmentName = message.optString("attachmentName").takeUnless { it.isBlank() || it == "null" },
+                                attachmentMimeType = message.optString("attachmentMimeType").takeUnless { it.isBlank() || it == "null" },
+                                reaction = message.optString("reaction").takeUnless { it.isBlank() || it == "null" },
+                                isEdited = message.optBoolean("isEdited", false),
                             ),
                         )
                     }

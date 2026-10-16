@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.snailmesssenger.core.designsystem.SnailMotion
+import com.example.snailmesssenger.core.designsystem.snailGlass
 import com.example.snailmesssenger.core.designsystem.snailSelectionProgress
 import com.example.snailmesssenger.data.preferences.UserPreferences
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
@@ -182,13 +183,17 @@ private fun ModernBottomBar(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().snailGlass(
+            shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+            baseColor = MaterialTheme.colorScheme.surface,
+            elevation = 14.dp,
+        ),
         shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+        color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 3.dp,
-        shadowElevation = 12.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.32f)),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        border = null,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),

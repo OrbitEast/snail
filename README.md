@@ -1,14 +1,22 @@
-# snail
-messenger with modern feel and high privacy
+# SNAIL Messenger
 
-## Android testing APK
+SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Compose. It uses original SNAIL branding and an adaptive, glass-layered interface inspired by contemporary messenger interaction patterns.
 
-- **Current test version:** 2.1
-- **[How to download the latest APK](TESTING.md)**
-- **[Build APK with GitHub Actions](https://github.com/OrbitEast/snail/actions/workflows/android-apk.yml)**
+## Current app surfaces
 
-Each push to `main` triggers a debug APK build. Download the APK from the latest successful workflow run's **Artifacts** section.
+- Username/password sign-up and sign-in for device-local demo accounts (passwords are salted and PBKDF2-hashed).
+- One-to-one conversation list, search, unread/work/personal filters, contacts lookup, theme and profile settings.
+- Text messages stored on the device, editable/deletable outgoing text, emoji reactions, and message search.
+- Attach photos/videos through Android's system media picker and documents through the system document picker.
+- Local message/attachment metadata persistence, adjustable chat wallpaper, light/dark modes, and responsive navigation.
+- Voice/video call screens and media-selection UI are present as prototype surfaces; they do not yet establish real network calls or upload/sync media.
 
-## Third-party emoji artwork
+## Important limitations
 
-SNAIL Messenger uses or may use Twemoji artwork for consistent emoji rendering. Twemoji graphics are licensed under Creative Commons Attribution 4.0 International (CC BY 4.0); the Twemoji code is licensed under MIT. Twemoji artwork is by Twitter, Inc. and other contributors. Source: https://github.com/twitter/twemoji. License: https://creativecommons.org/licenses/by/4.0/. Any redistributed artwork must retain appropriate attribution and note modifications where applicable.
+The current repositories are local prototype stores. Accounts and messages do not synchronize between users or devices, and messages are not end-to-end encrypted. Presence/read receipts are UI/demo state, not a server-backed delivery guarantee. The app does not yet provide a production messaging backend, push notifications, multi-device sync, or actual WebRTC calling.
+
+The UI borrows broad usability patterns from modern messaging applications while keeping SNAIL's own names and assets. It does not copy Telegram's source code or brand assets.
+
+## Build
+
+Open the project in a compatible Android Studio/Gradle environment and run the app configuration. See TESTING.md for the current verification checklist.
