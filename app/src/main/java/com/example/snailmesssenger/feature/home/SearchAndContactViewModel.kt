@@ -15,6 +15,12 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.snailmesssenger.data.model.Conversation
+import com.example.snailmesssenger.data.repository.DemoMessagingRepository
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @Immutable
 data class SearchContact(
@@ -40,6 +46,7 @@ data class SearchAndContactUiState(
 
 @Immutable
 private data class SearchIndexResult(
+    val allChats: List<ChatUiState>,
     val chats: List<ChatUiState>,
     val snailContacts: List<SearchContact>,
     val inviteContacts: List<SearchContact>,
@@ -90,14 +97,14 @@ class SearchAndContactViewModel : ViewModel() {
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
-    private val allChats = MutableStateFlow(mockChats())
     private val debouncedQuery = _query.debounce(250)
 
     private val indexedResults = combine(
-        allChats,
+        DemoMessagingRepository.conversationsFlow,
         contactSyncManager.contacts,
         debouncedQuery,
-    ) { chats, contacts, rawQuery ->
+    ) { conversations, contacts, rawQuery ->
+        val chats = toChatUiStates(conversations)
         withContext(Dispatchers.Default) {
             val term = rawQuery.trim().removePrefix("@")
             val chatMatches = if (term.isBlank()) chats else chats.filter { chat ->
@@ -111,6 +118,7 @@ class SearchAndContactViewModel : ViewModel() {
                     contact.phone.contains(term, ignoreCase = true)
             }
             SearchIndexResult(
+                allChats = chats,
                 chats = chatMatches,
                 snailContacts = contactMatches.filter { it.isRegistered },
                 inviteContacts = contactMatches.filterNot { it.isRegistered },
@@ -119,7 +127,12 @@ class SearchAndContactViewModel : ViewModel() {
     }.flowOn(Dispatchers.Default).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = SearchIndexResult(mockChats(), emptyList(), emptyList()),
+        initialValue = SearchIndexResult(
+            allChats = toChatUiStates(DemoMessagingRepository.getConversations()),
+            chats = toChatUiStates(DemoMessagingRepository.getConversations()),
+            snailContacts = emptyList(),
+            inviteContacts = emptyList(),
+        ),
     )
 
     val uiState: StateFlow<SearchAndContactUiState> = combine(
@@ -130,7 +143,7 @@ class SearchAndContactViewModel : ViewModel() {
     ) { currentQuery, results, contacts, syncing ->
         SearchAndContactUiState(
             query = currentQuery,
-            chats = allChats.value,
+            chats = results.allChats,
             matchingChats = results.chats,
             matchingSnailContacts = results.snailContacts,
             matchingInviteContacts = results.inviteContacts,
@@ -141,7 +154,9 @@ class SearchAndContactViewModel : ViewModel() {
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = SearchAndContactUiState(chats = allChats.value),
+        initialValue = SearchAndContactUiState(
+            chats = toChatUiStates(DemoMessagingRepository.getConversations()),
+        ),
     )
 
     init {
@@ -160,16 +175,49 @@ class SearchAndContactViewModel : ViewModel() {
         viewModelScope.launch { contactSyncManager.syncLocalMockContacts() }
     }
 
-    private fun mockChats(): List<ChatUiState> = listOf(
-        ChatUiState("maya", "Maya Kapoor", "@mayakapoor", "Are we still meeting at 7?", "20:14", 2, true, "Maya", false),
-        ChatUiState("arjun", "Arjun Mehta", "@arjunm", "The new build looks much better.", "19:48", 0, true, "Arjun", true),
-        ChatUiState("riya", "Riya Sharma", "@riya", "Thanks! I will send it tonight.", "18:32", 4, false, "Riya", false),
-        ChatUiState("dev-team", "Dev Notes", "@devnotes", "You: Pushed the navigation update", "17:06", 0, false, "Dev", true),
-        ChatUiState("kabir", "Kabir Singh", "@kabir", "That animation is smooth 🔥", "16:40", 1, true, "Kabir", false),
-        ChatUiState("ananya", "Ananya Das", "@ananyadas", "See you tomorrow!", "15:21", 0, false, "Ananya", false),
-        ChatUiState("rohan", "Rohan Verma", "@rohanv", "Can you review the login screen?", "14:05", 3, true, "Rohan", false),
-        ChatUiState("snail-news", "Snail Updates", "@snailupdates", "Privacy-first messaging, built for you.", "Mon", 0, false, "Snail", false),
-        ChatUiState("neha", "Neha Jain", "@nehaj", "Got it 👍", "Sun", 0, false, "Neha", false),
-        ChatUiState("vikram", "Vikram Roy", "@vikramroy", "Let's ship this version.", "Sat", 0, true, "Vikram", false),
-    )
+}
+
+private fun toChatUiStates(conversations: List<Conversation>): List<ChatUiState> =
+    conversations
+        .sortedWith(
+            compareByDescending<Conversation> { it.isPinned }
+                .thenByDescending { it.messages.lastOrNull()?.timestampMs ?: 0L },
+        )
+        .map { conversation ->
+            val last = conversation.messages.lastOrNull()
+            val rawPreview = when {
+                last == null -> "Start a conversation"
+                last.attachmentUri != null && last.text == "Photo" -> "📷 Photo"
+                last.attachmentUri != null && last.text == "Video" -> "🎬 Video"
+                last.attachmentUri != null -> last.text.ifBlank { "📎 Attachment" }
+                else -> last.text
+            }
+            ChatUiState(
+                id = conversation.id,
+                title = conversation.peer.displayName,
+                username = "@${conversation.peer.username}",
+                lastMessage = if (last?.isOutgoing == true) "You: $rawPreview" else rawPreview,
+                timestamp = last?.let { formatChatTimestamp(it.timestampMs) }.orEmpty(),
+                unreadCount = conversation.unreadCount,
+                isOnline = conversation.peer.isOnline,
+                avatarSeed = conversation.peer.id,
+                isOutgoing = last?.isOutgoing == true,
+                isPinned = conversation.isPinned,
+                isArchived = conversation.isArchived,
+                isMuted = conversation.isMuted,
+            )
+        }
+
+private fun formatChatTimestamp(timestampMs: Long): String {
+    if (timestampMs <= 0L) return ""
+    val now = Calendar.getInstance()
+    val then = Calendar.getInstance().apply { timeInMillis = timestampMs }
+    val sameDay = now.get(Calendar.YEAR) == then.get(Calendar.YEAR) &&
+        now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
+    if (sameDay) return SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestampMs))
+    now.add(Calendar.DAY_OF_YEAR, -1)
+    val yesterday = now.get(Calendar.YEAR) == then.get(Calendar.YEAR) &&
+        now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
+    return if (yesterday) "Yesterday"
+    else SimpleDateFormat("dd/MM/yy", Locale.getDefault()).format(Date(timestampMs))
 }

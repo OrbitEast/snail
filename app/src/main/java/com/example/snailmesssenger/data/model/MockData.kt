@@ -24,6 +24,17 @@ object MockData {
         User(id = "u4", username = "dara", displayName = "Dara Silva", bio = "Reads a lot of books.", isOnline = true),
     )
 
+    val discoverableContacts = listOf(
+        User(id = "maya", username = "mayakapoor", displayName = "Maya Kapoor", bio = "Product designer.", isOnline = true),
+        User(id = "arjun", username = "arjunm", displayName = "Arjun Mehta", bio = "Building useful things.", isOnline = true),
+        User(id = "riya", username = "riya", displayName = "Riya Sharma", bio = "Learning every day.", isOnline = false),
+        User(id = "kabir", username = "kabir", displayName = "Kabir Singh", bio = "Motion and interaction.", isOnline = true),
+        User(id = "ananya", username = "ananyadas", displayName = "Ananya Das", bio = "Books, art, and music.", isOnline = false),
+        User(id = "rohan", username = "rohanv", displayName = "Rohan Verma", bio = "Android developer.", isOnline = true),
+        User(id = "neha", username = "nehaj", displayName = "Neha Jain", bio = "Design systems.", isOnline = false),
+        User(id = "vikram", username = "vikramroy", displayName = "Vikram Roy", bio = "Making things simpler.", isOnline = false),
+    )
+
     private fun ts(hoursAgo: Int): Long =
         System.currentTimeMillis() - hoursAgo * 3_600_000L
 

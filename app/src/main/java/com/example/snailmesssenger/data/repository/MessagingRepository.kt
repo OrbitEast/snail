@@ -23,6 +23,9 @@ interface MessagingRepository {
     fun editMessage(conversationId: String, messageId: String, newText: String)
     fun deleteMessage(conversationId: String, messageId: String)
     fun reactToMessage(conversationId: String, messageId: String, reaction: String)
+    fun setConversationPinned(conversationId: String, pinned: Boolean)
+    fun setConversationArchived(conversationId: String, archived: Boolean)
+    fun setConversationMuted(conversationId: String, muted: Boolean)
     fun startConversationWith(peerId: String): Conversation
     fun markConversationRead(conversationId: String)
 }
@@ -164,9 +167,33 @@ object DemoMessagingRepository : MessagingRepository {
         persistConversations()
     }
 
+    override fun setConversationPinned(conversationId: String, pinned: Boolean) {
+        updateConversationFlag(conversationId) { it.copy(isPinned = pinned) }
+    }
+
+    override fun setConversationArchived(conversationId: String, archived: Boolean) {
+        updateConversationFlag(conversationId) { it.copy(isArchived = archived) }
+    }
+
+    override fun setConversationMuted(conversationId: String, muted: Boolean) {
+        updateConversationFlag(conversationId) { it.copy(isMuted = muted) }
+    }
+
+    private fun updateConversationFlag(conversationId: String, transform: (Conversation) -> Conversation) {
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        if (index < 0) return
+        mutableConversations[index] = transform(mutableConversations[index])
+        publishChanges()
+        persistConversations()
+    }
+
     override fun startConversationWith(peerId: String): Conversation {
-        mutableConversations.firstOrNull { it.peer.id == peerId }?.let { return it }
+        mutableConversations.firstOrNull { it.peer.id == peerId }?.let { existing ->
+            if (existing.isArchived) setConversationArchived(existing.id, false)
+            return getConversation(existing.id) ?: existing
+        }
         val peer = MockData.conversations.map { it.peer }.firstOrNull { it.id == peerId }
+            ?: MockData.discoverableContacts.firstOrNull { it.id == peerId }
             ?: throw IllegalArgumentException("Peer not found.")
         val conversation = Conversation(
             id = "c${System.currentTimeMillis()}",
@@ -216,6 +243,9 @@ object DemoMessagingRepository : MessagingRepository {
                     .put("displayName", conversation.peer.displayName)
                     .put("bio", conversation.peer.bio)
                     .put("unreadCount", conversation.unreadCount)
+                    .put("isPinned", conversation.isPinned)
+                    .put("isArchived", conversation.isArchived)
+                    .put("isMuted", conversation.isMuted)
                     .put("messages", messages),
             )
         }
@@ -258,6 +288,9 @@ object DemoMessagingRepository : MessagingRepository {
                         peer = peer,
                         messages = messages,
                         unreadCount = item.optInt("unreadCount", 0),
+                        isPinned = item.optBoolean("isPinned", false),
+                        isArchived = item.optBoolean("isArchived", false),
+                        isMuted = item.optBoolean("isMuted", false),
                     ),
                 )
             }

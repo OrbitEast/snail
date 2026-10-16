@@ -3,6 +3,7 @@ package com.example.snailmesssenger.feature.home
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -52,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 
 private val SearchMatchBlue = Color(0xFF2481CC)
 
@@ -98,13 +102,14 @@ fun OptimizedChatListScreen(
         },
     ) { padding ->
         var selectedFolder by remember { mutableStateOf("All") }
+        var selectedChat by remember { mutableStateOf<ChatUiState?>(null) }
         val showContactResults = searchActive
         val folderFilteredChats = remember(selectedFolder, state.chats) {
             when (selectedFolder) {
-                "Unread" -> state.chats.filter { it.unreadCount > 0 }
-                "Personal" -> state.chats.filter { !it.title.contains("Group", ignoreCase = true) }
-                "Work" -> state.chats.filter { it.title.contains("Dev", ignoreCase = true) || it.title.contains("Work", ignoreCase = true) || it.title.contains("Team", ignoreCase = true) }
-                else -> state.chats
+                "Unread" -> state.chats.filter { !it.isArchived && it.unreadCount > 0 }
+                "Pinned" -> state.chats.filter { !it.isArchived && it.isPinned }
+                "Archived" -> state.chats.filter { it.isArchived }
+                else -> state.chats.filterNot { it.isArchived }
             }
         }
         val visibleChats = if (state.query.isBlank()) folderFilteredChats else state.matchingChats
@@ -117,10 +122,12 @@ fun OptimizedChatListScreen(
                     modifier = Modifier.fillMaxWidth().animateContentSize().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    listOf("All", "Personal", "Work", "Unread").forEach { folder ->
+                    listOf("All", "Unread", "Pinned", "Archived").forEach { folder ->
                         val isSelected = selectedFolder == folder
                         val unreadInFolder = when(folder) {
-                            "Unread" -> state.chats.sumOf { it.unreadCount }
+                            "Unread" -> state.chats.filterNot { it.isArchived }.sumOf { it.unreadCount }
+                            "Pinned" -> state.chats.count { it.isPinned && !it.isArchived }
+                            "Archived" -> state.chats.count { it.isArchived }
                             else -> 0
                         }
                         Surface(
@@ -179,6 +186,7 @@ fun OptimizedChatListScreen(
                             chat = chat,
                             query = "",
                             onClick = { onOpenChat(chat.id) },
+                            onLongPress = { selectedChat = chat },
                         )
                     }
                 }
@@ -188,7 +196,12 @@ fun OptimizedChatListScreen(
                         SectionHeader("CHATS", showFloatingHeader)
                     }
                     items(visibleChats, key = { "search-chat-${it.id}" }) { chat ->
-                        ChatSearchResultRow(chat = chat, query = state.query, onClick = { onOpenChat(chat.id) })
+                        ChatSearchResultRow(
+                            chat = chat,
+                            query = state.query,
+                            onClick = { onOpenChat(chat.id) },
+                            onLongPress = { selectedChat = chat },
+                        )
                     }
                 }
                 if (visibleSnailContacts.isNotEmpty()) {
@@ -200,7 +213,10 @@ fun OptimizedChatListScreen(
                                 ContactRowItem(
                                     contact = contact,
                                     query = state.query,
-                                    onOpen = { onOpenChat(it.id) },
+                                    onOpen = {
+                                        val conversation = DemoMessagingRepository.startConversationWith(it.id)
+                                        onOpenChat(conversation.id)
+                                    },
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                             }
@@ -212,7 +228,14 @@ fun OptimizedChatListScreen(
                         .toSortedMap().forEach { (letter, contactsForLetter) ->
                             item(key = "invite-letter-$letter") { LetterHeader(letter.toString()) }
                             items(contactsForLetter, key = { "invite-contact-${it.id}" }) { contact ->
-                                ContactRowItem(contact = contact, query = state.query)
+                                ContactRowItem(
+                                contact = contact,
+                                query = state.query,
+                                onOpen = {
+                                    val conversation = DemoMessagingRepository.startConversationWith(it.id)
+                                    onOpenChat(conversation.id)
+                                },
+                            )
                                 HorizontalDivider(modifier = Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                             }
                         }
@@ -231,6 +254,35 @@ fun OptimizedChatListScreen(
                 }
             }
         }
+        }
+        selectedChat?.let { chat ->
+            AlertDialog(
+                onDismissRequest = { selectedChat = null },
+                title = { Text(chat.title) },
+                text = { Text("Manage this conversation on this device.") },
+                confirmButton = {
+                    Column {
+                        TextButton(onClick = {
+                            DemoMessagingRepository.setConversationPinned(chat.id, !chat.isPinned)
+                            selectedChat = null
+                        }) { Text(if (chat.isPinned) "Unpin chat" else "Pin chat") }
+                        TextButton(onClick = {
+                            DemoMessagingRepository.setConversationMuted(chat.id, !chat.isMuted)
+                            selectedChat = null
+                        }) { Text(if (chat.isMuted) "Unmute notifications" else "Mute notifications") }
+                        TextButton(onClick = {
+                            DemoMessagingRepository.setConversationArchived(chat.id, !chat.isArchived)
+                            selectedFolder = if (chat.isArchived) "All" else "Archived"
+                            selectedChat = null
+                        }) { Text(if (chat.isArchived) "Move to chats" else "Archive chat") }
+                        TextButton(onClick = {
+                            DemoMessagingRepository.markConversationRead(chat.id)
+                            selectedChat = null
+                        }) { Text("Mark as read") }
+                        TextButton(onClick = { selectedChat = null }) { Text("Close") }
+                    }
+                },
+            )
         }
     }
 }
@@ -265,8 +317,12 @@ private fun ChatSearchResultRow(
     chat: ChatUiState,
     query: String,
     onClick: () -> Unit,
+    onLongPress: () -> Unit = {},
 ) {
-    Column(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -21,6 +21,9 @@ data class ChatUiState(
     val isOnline: Boolean = false,
     val avatarSeed: String = title,
     val isOutgoing: Boolean = false,
+    val isPinned: Boolean = false,
+    val isArchived: Boolean = false,
+    val isMuted: Boolean = false,
 )
 
 @Immutable

@@ -15,6 +15,9 @@ data class Conversation(
     val peer: User,
     val messages: List<Message> = emptyList(),
     val unreadCount: Int = 0,
+    val isPinned: Boolean = false,
+    val isArchived: Boolean = false,
+    val isMuted: Boolean = false,
 )
 
 /** A single chat message. */
