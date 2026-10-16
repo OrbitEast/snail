@@ -21,6 +21,7 @@ fun SettingsScreen(
     onOpenAppearance: () -> Unit,
     onOpenEditProfile: () -> Unit,
     onLogout: () -> Unit,
+    showBackButton: Boolean = true,
     viewModel: SettingsViewModel = viewModel(),
 ) {
     AnimatedContent(
@@ -43,6 +44,7 @@ fun SettingsScreen(
             onOpenAppearance = onOpenAppearance,
             onOpenEditProfile = onOpenEditProfile,
             onLogout = onLogout,
+            showBackButton = showBackButton,
             viewModel = viewModel,
         )
     }
