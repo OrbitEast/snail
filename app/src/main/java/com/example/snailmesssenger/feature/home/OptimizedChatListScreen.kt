@@ -266,7 +266,10 @@ fun OptimizedChatListScreen(
                         MessageSearchResultRow(
                             result = result,
                             query = state.query,
-                            onClick = { onOpenChat(result.conversationId) },
+                            onClick = {
+                                DemoMessagingRepository.requestMessageJump(result.conversationId, result.message.id)
+                                onOpenChat(result.conversationId)
+                            },
                         )
                     }
                 }

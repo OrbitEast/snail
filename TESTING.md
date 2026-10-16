@@ -6,7 +6,7 @@
 - [ ] Register two local demo accounts and verify duplicate usernames are rejected.
 - [ ] Sign in/out and confirm local account persistence.
 - [ ] Send text, edit your own text, delete a message, add/remove a reaction, reply, forward between local chats, create/vote in a poll, and search within a chat.
-- [ ] Search for text that exists only in an older message; verify it appears under the global MESSAGES section and opens the correct conversation.
+- [ ] Search for text that exists only in an older message; verify it appears under the global MESSAGES section, opens the correct conversation, and scrolls/highlights the exact message.
 - [ ] Pin a message, verify the banner survives relaunch and jumps to the right item, then unpin it.
 - [ ] Type a draft and reply, leave the chat, return and restart the app; confirm text/reply draft restores and clears after sending.
 - [ ] Open Saved Messages twice and confirm only one self-chat exists and its messages persist after app restart.

@@ -160,6 +160,7 @@ fun ChatScreen(
         NightMode.DARK -> true
     }
     val conversations by DemoMessagingRepository.conversationsFlow.collectAsState()
+    val pendingMessageJump by DemoMessagingRepository.pendingMessageJump.collectAsState()
     val conversation = conversations.firstOrNull { it.id == conversationId }
     if (conversation == null) {
         Scaffold(
@@ -211,6 +212,7 @@ fun ChatScreen(
     var selectedMessage by remember { mutableStateOf<Message?>(null) }
     var forwardingMessage by remember { mutableStateOf<Message?>(null) }
     var editingMessageId by remember { mutableStateOf<String?>(null) }
+    var highlightedMessageId by remember(conversationId) { mutableStateOf<String?>(null) }
     var replyTarget by remember(conversationId) {
         val draft = DemoMessagingRepository.getDraft(conversationId)
         mutableStateOf(
@@ -389,6 +391,23 @@ fun ChatScreen(
     }
     val pinnedMessage = conversation.pinnedMessageId?.let { pinnedId ->
         messages.firstOrNull { it.id == pinnedId }
+    }
+
+    LaunchedEffect(pendingMessageJump, conversationId, messages) {
+        val request = pendingMessageJump
+        if (request?.conversationId == conversationId) {
+            searchVisible = false
+            searchQuery = ""
+            val targetIndex = messages.indexOfFirst { it.id == request.messageId }
+            if (targetIndex >= 0) {
+                delay(100)
+                listState.animateScrollToItem(targetIndex)
+                highlightedMessageId = request.messageId
+                delay(1_600)
+                highlightedMessageId = null
+            }
+            DemoMessagingRepository.consumeMessageJump(request)
+        }
     }
 
     LaunchedEffect(messages.size, searchQuery) {
@@ -1020,6 +1039,7 @@ fun ChatScreen(
                         MessageBubble(
                             message = message,
                             isDark = isDarkTheme,
+                            isHighlighted = highlightedMessageId == message.id,
                             onLongPress = { selectedMessage = message },
                             onVotePoll = { messageId, optionIndex ->
                                 DemoMessagingRepository.voteOnPoll(conversationId, messageId, optionIndex)
@@ -1427,6 +1447,7 @@ fun ChatScreen(
 private fun MessageBubble(
     message: Message,
     isDark: Boolean,
+    isHighlighted: Boolean,
     onLongPress: () -> Unit,
     onVotePoll: (String, Int) -> Unit,
 ) {
@@ -1465,7 +1486,11 @@ private fun MessageBubble(
                     bottomStart = if (outgoing) bubbleRadius else 4.dp,
                     bottomEnd = if (outgoing) 4.dp else bubbleRadius,
                 ),
-                shadowElevation = 1.dp,
+                shadowElevation = if (isHighlighted) 5.dp else 1.dp,
+                border = if (isHighlighted) androidx.compose.foundation.BorderStroke(
+                    2.dp,
+                    MaterialTheme.colorScheme.primary,
+                ) else null,
                 modifier = Modifier.widthIn(max = 310.dp)
                     .animateContentSize()
                     .combinedClickable(onClick = {}, onLongClick = onLongPress),

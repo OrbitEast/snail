@@ -48,6 +48,12 @@ interface MessagingRepository {
     fun clearDraft(conversationId: String)
 }
 
+/** A one-time request to open a specific saved message. */
+data class MessageJumpRequest(
+    val conversationId: String,
+    val messageId: String,
+)
+
 /** Device-local conversation store for the native prototype. */
 object DemoMessagingRepository : MessagingRepository {
 
@@ -57,6 +63,16 @@ object DemoMessagingRepository : MessagingRepository {
     private var preferences: SharedPreferences? = null
     private val _conversationsFlow = MutableStateFlow(mutableConversations.toList())
     val conversationsFlow: StateFlow<List<Conversation>> = _conversationsFlow
+    private val _pendingMessageJump = MutableStateFlow<MessageJumpRequest?>(null)
+    val pendingMessageJump: StateFlow<MessageJumpRequest?> = _pendingMessageJump
+
+    fun requestMessageJump(conversationId: String, messageId: String) {
+        _pendingMessageJump.value = MessageJumpRequest(conversationId, messageId)
+    }
+
+    fun consumeMessageJump(request: MessageJumpRequest) {
+        if (_pendingMessageJump.value == request) _pendingMessageJump.value = null
+    }
 
     fun initialize(context: Context) {
         if (preferences != null) return
