@@ -185,6 +185,7 @@ fun ChatScreen(
     var messages by remember(conversationId) { mutableStateOf(conversation.messages) }
     var showProfileSheet by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
+    var showClearHistoryConfirm by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var emojiCategory by remember { mutableStateOf("Smileys") }
     var recentEmojis by remember {
@@ -472,6 +473,59 @@ fun ChatScreen(
                                         } else {
                                             searchVisible = true
                                         }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (conversation.isPinned) "Unpin chat" else "Pin chat") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        DemoMessagingRepository.setConversationPinned(conversationId, !conversation.isPinned)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (conversation.isMuted) "Unmute notifications" else "Mute notifications") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        DemoMessagingRepository.setConversationMuted(conversationId, !conversation.isMuted)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Export chat") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        val exportBody = buildString {
+                                            appendLine("SNAIL chat with ${conversation.title ?: conversation.peer.displayName}")
+                                            appendLine("Exported locally on ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}")
+                                            appendLine()
+                                            conversation.messages.forEach { item ->
+                                                val time = formatTime(item.timestampMs)
+                                                val sender = if (item.isOutgoing) "You" else (conversation.title ?: conversation.peer.displayName)
+                                                val content = when {
+                                                    item.pollQuestion != null -> "Poll: ${item.pollQuestion} — ${item.pollOptions.joinToString(", ")}"
+                                                    item.attachmentUri != null -> item.text.ifBlank { item.attachmentName ?: "Attachment" }
+                                                    else -> item.text
+                                                }
+                                                appendLine("[$time] $sender: $content")
+                                            }
+                                        }
+                                        val share = Intent(Intent.ACTION_SEND)
+                                            .setType("text/plain")
+                                            .putExtra(Intent.EXTRA_SUBJECT, "SNAIL chat export")
+                                            .putExtra(Intent.EXTRA_TEXT, exportBody)
+                                        runCatching {
+                                            context.startActivity(Intent.createChooser(share, "Export chat"))
+                                        }.onFailure {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Could not open the system share sheet.")
+                                            }
+                                        }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Clear history") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showClearHistoryConfirm = true
                                     },
                                 )
                             }
@@ -941,6 +995,31 @@ fun ChatScreen(
                     pendingAttachments = emptyList()
                     attachmentCaption = ""
                 }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (showClearHistoryConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearHistoryConfirm = false },
+            title = { Text("Clear chat history?") },
+            text = {
+                Text(
+                    "This removes all messages from this device's copy of the conversation. " +
+                        "It cannot affect a remote recipient because this prototype has no remote message store.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        DemoMessagingRepository.clearConversationHistory(conversationId)
+                        messages = emptyList()
+                        showClearHistoryConfirm = false
+                    },
+                ) { Text("Clear history", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearHistoryConfirm = false }) { Text("Cancel") }
             },
         )
     }

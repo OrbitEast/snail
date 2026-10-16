@@ -9,7 +9,8 @@
 - [ ] Pick multiple photos/videos and documents (up to 10 per action), add a caption, and verify attachment ordering and persistence.
 - [ ] Record a voice message, cancel it by navigating away while recording, and verify no partial recording is sent.
 - [ ] Test light, dark, and system themes, chat wallpapers, and bottom navigation across small and large screens.
-- [ ] Open an unread chat and verify its inbox badge clears; mute/unmute a chat from the row and profile sheet and verify state persists.
+- [ ] Open an unread chat and verify its inbox badge clears; mute/unmute a chat from the row, profile sheet and chat overflow; pin/unpin in the chat overflow.
+- [ ] Export a chat via Android Sharesheet, then clear history and confirm the empty conversation persists after relaunch.
 - [ ] Exercise voice/video call screens as UI prototypes; verify no claim of real remote connectivity.
 - [ ] Test URI permissions after Android process death and app restart on API 28+ devices.
 

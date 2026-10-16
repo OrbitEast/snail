@@ -38,6 +38,7 @@ interface MessagingRepository {
     fun createGroupOrChannel(title: String, memberIds: List<String>, isChannel: Boolean): Conversation
     fun startConversationWith(peerId: String): Conversation
     fun markConversationRead(conversationId: String)
+    fun clearConversationHistory(conversationId: String)
 }
 
 /** Device-local conversation store for the native prototype. */
@@ -354,6 +355,17 @@ object DemoMessagingRepository : MessagingRepository {
         publishChanges()
         persistConversations()
         return conversation
+    }
+
+    override fun clearConversationHistory(conversationId: String) {
+        val index = mutableConversations.indexOfFirst { it.id == conversationId }
+        if (index < 0) return
+        mutableConversations[index] = mutableConversations[index].copy(
+            messages = emptyList(),
+            unreadCount = 0,
+        )
+        publishChanges()
+        persistConversations()
     }
 
     override fun markConversationRead(conversationId: String) {
