@@ -16,10 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -120,12 +117,6 @@ fun PeerProfileSheet(
                     label = if (notificationsMuted) "Unmute" else "Mute",
                     onClick = { notificationsMuted = !notificationsMuted },
                 )
-                Spacer(Modifier.width(Spacing.xl))
-                ProfileActionButton(
-                    icon = Icons.Default.PersonAdd,
-                    label = "Add",
-                    onClick = {},
-                )
             }
 
             Spacer(Modifier.height(Spacing.xxl))
@@ -147,29 +138,17 @@ fun PeerProfileSheet(
             Spacer(Modifier.height(Spacing.md))
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
-            // Shared Media & Files Sections
-            SnailSectionHeading(text = "Shared Media")
+            // Keep this profile truthful to SNAIL's text-first one-to-one scope.
+            SnailSectionHeading(text = "Conversation")
             SnailSectionRow(
-                title = "Media, files and links",
-                subtitle = "12 photos • 3 files • 5 links",
-                icon = Icons.Default.PhotoLibrary,
-                onClick = {},
+                title = "Message history",
+                subtitle = "Text messages in this conversation",
+                icon = null,
             )
             SnailSectionRow(
-                title = "Voice messages",
-                subtitle = "8 voice notes",
-                icon = Icons.Default.Mic,
-                onClick = {},
-            )
-
-            Spacer(Modifier.height(Spacing.md))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-
-            SnailSectionRow(
-                title = "Block user",
+                title = "Privacy",
+                subtitle = "One-to-one conversation",
                 icon = Icons.Default.Block,
-                onClick = {},
-                destructive = true,
             )
         }
     }
