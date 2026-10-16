@@ -8,6 +8,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.example.snailmesssenger.data.repository.DemoAuthRepository
 import com.example.snailmesssenger.data.repository.DemoMessagingRepository
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -36,7 +37,8 @@ class ScheduledMessageWorker(
         if (text.isBlank()) return Result.failure()
 
         return try {
-            DemoMessagingRepository.initialize(applicationContext)
+            DemoAuthRepository.initialize(applicationContext)
+            DemoMessagingRepository.initialize(applicationContext, DemoAuthRepository.currentUser?.id)
             DemoMessagingRepository.sendScheduledMessage(
                 conversationId = conversationId,
                 text = text,

@@ -9,7 +9,7 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 - Text messages stored on the device, editable/deletable outgoing text, reply quotes, forwarding between local conversations, emoji reactions, local polls with vote counts, pinned messages with a jump banner, full-text search, per-conversation drafts, and scheduled local messages with cancellation.
 - Groups and broadcast-style channels can be created on-device; member/subscriber lists can be edited and persist locally, but do not synchronize with remote members.
 - Opening a chat clears its local unread count. Chat overflow supports persistent pin/mute, plain-text export via Android Sharesheet, and confirmed local history clearing. Individual message deletion also requires confirmation and clears stale pinned-message references.
-- The signed-in local demo account is restored after app restart; logout clears that local session.
+- The signed-in local demo account is restored after app restart; local conversations and drafts are isolated by account, and logout clears that session.
 - Select up to 10 photos/videos or documents per composer action, add a caption before sending, tap images for full-screen preview, or open video/files/audio in another installed app.
 - Record voice-message audio locally with a microphone permission prompt, a live duration counter, and a dedicated in-app private-storage file URI.
 - Invite links can be shared through Android's system Sharesheet.
@@ -19,7 +19,7 @@ SNAIL is a native Android messaging prototype built with Kotlin and Jetpack Comp
 
 ## Important limitations
 
-The current repositories are local prototype stores. Accounts and messages do not synchronize between users or devices; poll votes are local-only, and messages are not end-to-end encrypted. Presence/read receipts are UI/demo state, not a server-backed delivery guarantee. The app does not yet provide a production messaging backend, push notifications, multi-device sync, or actual WebRTC calling.
+The current repositories are local prototype stores. Accounts and messages do not synchronize between users or devices; local data is separated between accounts on this device, poll votes are local-only, and messages are not end-to-end encrypted. Presence/read receipts are UI/demo state, not a server-backed delivery guarantee. The app does not yet provide a production messaging backend, push notifications, multi-device sync, or actual WebRTC calling.
 
 The UI borrows broad usability patterns from modern messaging applications while keeping SNAIL's own names and assets. It does not copy Telegram's source code or brand assets.
 

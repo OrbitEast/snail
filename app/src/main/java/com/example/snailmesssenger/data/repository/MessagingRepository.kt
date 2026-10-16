@@ -68,6 +68,8 @@ object DemoMessagingRepository : MessagingRepository {
         MockData.conversations.map { it.copy(messages = it.messages.toList(), peer = it.peer.copy(isOnline = false)) }
             .toMutableList()
     private var preferences: SharedPreferences? = null
+    private var applicationContext: Context? = null
+    private var activeAccountKey: String? = null
     private val _conversationsFlow = MutableStateFlow(mutableConversations.toList())
     val conversationsFlow: StateFlow<List<Conversation>> = _conversationsFlow
     private val _pendingMessageJump = MutableStateFlow<MessageJumpRequest?>(null)
@@ -81,27 +83,89 @@ object DemoMessagingRepository : MessagingRepository {
         if (_pendingMessageJump.value == request) _pendingMessageJump.value = null
     }
 
-    fun initialize(context: Context) {
-        if (preferences != null) return
-        val store = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    fun initialize(
+        context: Context,
+        accountId: String? = DemoAuthRepository.currentUser?.id,
+    ) {
+        val appContext = context.applicationContext
+        applicationContext = appContext
+        val accountKey = accountScopeKey(accountId)
+        if (preferences != null && activeAccountKey == accountKey) return
+
+        val safeKey = accountKey
+            .filter { it.isLetterOrDigit() || it == '_' || it == '-' }
+            .take(48)
+            .ifBlank { "guest" }
+        val store = appContext.getSharedPreferences("${PREFS_NAME}_${safeKey}", Context.MODE_PRIVATE)
+        migrateLegacyLocalData(appContext, store)
+
+        activeAccountKey = accountKey
         preferences = store
+        mutableConversations.clear()
+        mutableConversations.addAll(
+            MockData.conversations.map {
+                it.copy(messages = it.messages.toList(), peer = it.peer.copy(isOnline = false))
+            },
+        )
+
         val saved = store.getString(KEY_CONVERSATIONS, null)
-        if (saved != null) {
-            val parsed = runCatching { deserializeConversations(JSONArray(saved)) }.getOrNull()
-            if (parsed != null) {
-                mutableConversations.clear()
-                mutableConversations.addAll(parsed)
-                _conversationsFlow.value = mutableConversations.toList()
-            }
-        } else {
-            persistConversations()
+        val parsed = saved?.let { runCatching { deserializeConversations(JSONArray(it)) }.getOrNull() }
+        if (parsed != null) {
+            mutableConversations.clear()
+            mutableConversations.addAll(parsed)
+        }
+        _conversationsFlow.value = mutableConversations.toList()
+        persistConversations()
+    }
+
+    private fun accountScopeKey(accountId: String?): String =
+        accountId?.takeIf { it.isNotBlank() } ?: "guest"
+
+    private fun ensureAccountScope() {
+        val context = applicationContext ?: return
+        val accountId = DemoAuthRepository.currentUser?.id
+        if (preferences == null || activeAccountKey != accountScopeKey(accountId)) {
+            initialize(context, accountId)
         }
     }
 
-    override fun getConversations(): List<Conversation> = mutableConversations.toList()
+    /**
+     * One-time migration from the previous shared local store. Migrated messages
+     * and drafts are assigned to the account active on the first launch after upgrade;
+     * the legacy keys are then removed so a second local account cannot inherit them.
+     */
+    private fun migrateLegacyLocalData(context: Context, destination: SharedPreferences) {
+        val legacy = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val legacyValues = legacy.all
+        if (legacyValues.isEmpty()) return
 
-    override fun getConversation(id: String): Conversation? =
-        mutableConversations.firstOrNull { it.id == id }
+        if (!destination.contains(KEY_CONVERSATIONS)) {
+            val editor = destination.edit()
+            (legacyValues[KEY_CONVERSATIONS] as? String)?.let {
+                editor.putString(KEY_CONVERSATIONS, it)
+            }
+            legacyValues.forEach { (key, value) ->
+                if (key.startsWith(DRAFT_PREFIX) && value is String) {
+                    editor.putString(key, value)
+                }
+            }
+            editor.apply()
+        }
+
+        val legacyEditor = legacy.edit().remove(KEY_CONVERSATIONS)
+        legacyValues.keys.filter { it.startsWith(DRAFT_PREFIX) }.forEach(legacyEditor::remove)
+        legacyEditor.apply()
+    }
+
+    override fun getConversations(): List<Conversation> {
+        ensureAccountScope()
+        return mutableConversations.toList()
+    }
+
+    override fun getConversation(id: String): Conversation? {
+        ensureAccountScope()
+        return mutableConversations.firstOrNull { it.id == id }
+    }
 
     override fun sendMessage(
         conversationId: String,
@@ -109,6 +173,7 @@ object DemoMessagingRepository : MessagingRepository {
         replyToMessageId: String?,
         replyToText: String?,
     ): Message {
+        ensureAccountScope()
         val normalizedText = text.trim()
         require(normalizedText.isNotEmpty()) { "Message cannot be empty." }
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
@@ -140,6 +205,7 @@ object DemoMessagingRepository : MessagingRepository {
         replyToMessageId: String?,
         replyToText: String?,
     ): Message {
+        ensureAccountScope()
         val stableId = "scheduled:$scheduledId"
         mutableConversations.firstNotNullOfOrNull { conversation ->
             conversation.messages.firstOrNull { it.id == stableId }
@@ -169,6 +235,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun createPoll(conversationId: String, question: String, options: List<String>): Message {
+        ensureAccountScope()
         val normalizedQuestion = question.trim()
         val normalizedOptions = options.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         require(normalizedQuestion.isNotEmpty()) { "Poll question cannot be empty." }
@@ -197,6 +264,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun voteOnPoll(conversationId: String, messageId: String, optionIndex: Int) {
+        ensureAccountScope()
         val conversationIndex = mutableConversations.indexOfFirst { it.id == conversationId }
         require(conversationIndex >= 0) { "Conversation not found." }
         val conversation = mutableConversations[conversationIndex]
@@ -229,6 +297,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun forwardMessage(targetConversationId: String, sourceMessage: Message): Message {
+        ensureAccountScope()
         val index = mutableConversations.indexOfFirst { it.id == targetConversationId }
         require(index >= 0) { "Target conversation not found." }
         val message = Message(
@@ -265,6 +334,7 @@ object DemoMessagingRepository : MessagingRepository {
         name: String,
         caption: String,
     ): Message {
+        ensureAccountScope()
         require(uri.isNotBlank()) { "Attachment URI is required." }
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
         require(index >= 0) { "Conversation not found." }
@@ -297,6 +367,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun editMessage(conversationId: String, messageId: String, newText: String) {
+        ensureAccountScope()
         val normalizedText = newText.trim()
         require(normalizedText.isNotEmpty()) { "Message cannot be empty." }
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
@@ -315,6 +386,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun deleteMessage(conversationId: String, messageId: String) {
+        ensureAccountScope()
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
         if (index < 0) return
         val updated = mutableConversations[index].copy(
@@ -328,6 +400,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun reactToMessage(conversationId: String, messageId: String, reaction: String) {
+        ensureAccountScope()
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
         if (index < 0) return
         val updated = mutableConversations[index].copy(
@@ -343,14 +416,17 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun setConversationPinned(conversationId: String, pinned: Boolean) {
+        ensureAccountScope()
         updateConversationFlag(conversationId) { it.copy(isPinned = pinned) }
     }
 
     override fun setConversationArchived(conversationId: String, archived: Boolean) {
+        ensureAccountScope()
         updateConversationFlag(conversationId) { it.copy(isArchived = archived) }
     }
 
     override fun setConversationMuted(conversationId: String, muted: Boolean) {
+        ensureAccountScope()
         updateConversationFlag(conversationId) { it.copy(isMuted = muted) }
     }
 
@@ -367,6 +443,7 @@ object DemoMessagingRepository : MessagingRepository {
         memberIds: List<String>,
         isChannel: Boolean,
     ): Conversation {
+        ensureAccountScope()
         val normalizedTitle = title.trim()
         require(normalizedTitle.length in 2..48) { "Name must be between 2 and 48 characters." }
         val knownUsers = (MockData.discoverableContacts + MockData.conversations.map { it.peer })
@@ -407,6 +484,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun startConversationWith(peerId: String): Conversation {
+        ensureAccountScope()
         mutableConversations.firstOrNull { it.peer.id == peerId }?.let { existing ->
             if (existing.isArchived) setConversationArchived(existing.id, false)
             return getConversation(existing.id) ?: existing
@@ -425,6 +503,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun updateConversationMembers(conversationId: String, memberIds: List<String>) {
+        ensureAccountScope()
         val conversationIndex = mutableConversations.indexOfFirst { it.id == conversationId }
         require(conversationIndex >= 0) { "Conversation not found." }
         val existing = mutableConversations[conversationIndex]
@@ -446,6 +525,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun getOrCreateSavedMessages(): Conversation {
+        ensureAccountScope()
         mutableConversations.firstOrNull { it.isSavedMessages }?.let { return it }
         val conversation = Conversation(
             id = "saved-messages",
@@ -469,6 +549,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun getDraft(conversationId: String): MessageDraft {
+        ensureAccountScope()
         val raw = preferences?.getString("$DRAFT_PREFIX$conversationId", null) ?: return MessageDraft()
         val json = runCatching { JSONObject(raw) }.getOrNull() ?: return MessageDraft()
         return MessageDraft(
@@ -481,6 +562,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun saveDraft(conversationId: String, draft: MessageDraft) {
+        ensureAccountScope()
         val key = "$DRAFT_PREFIX$conversationId"
         if (draft.text.isBlank() && draft.replyToMessageId == null && draft.replyToText.isNullOrBlank()) {
             preferences?.edit()?.remove(key)?.apply()
@@ -494,10 +576,12 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun clearDraft(conversationId: String) {
+        ensureAccountScope()
         preferences?.edit()?.remove("$DRAFT_PREFIX$conversationId")?.apply()
     }
 
     override fun setPinnedMessage(conversationId: String, messageId: String?) {
+        ensureAccountScope()
         val conversationIndex = mutableConversations.indexOfFirst { it.id == conversationId }
         require(conversationIndex >= 0) { "Conversation not found." }
         if (messageId != null) {
@@ -512,6 +596,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun clearConversationHistory(conversationId: String) {
+        ensureAccountScope()
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
         if (index < 0) return
         mutableConversations[index] = mutableConversations[index].copy(
@@ -525,6 +610,7 @@ object DemoMessagingRepository : MessagingRepository {
     }
 
     override fun markConversationRead(conversationId: String) {
+        ensureAccountScope()
         val index = mutableConversations.indexOfFirst { it.id == conversationId }
         if (index < 0 || mutableConversations[index].unreadCount == 0) return
         mutableConversations[index] = mutableConversations[index].copy(unreadCount = 0)
